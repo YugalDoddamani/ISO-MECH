@@ -24,6 +24,7 @@ python3 -m http.server 8000 --bind 127.0.0.1
 Then run a check from another terminal, for example:
 
 ```bash
+node tests/yard-ui-test.cjs
 node tests/assembly-verify.cjs
 node tests/site-test.cjs
 ```
@@ -31,7 +32,10 @@ node tests/site-test.cjs
 To run every check in sequence:
 
 ```bash
-for test in tests/assembly-test.cjs tests/assembly-verify.cjs tests/check-motion.cjs tests/final-check.cjs tests/interaction-test.cjs tests/motion-test.cjs tests/site-test.cjs tests/test.cjs tests/validation-v2.cjs; do
+for test in tests/yard-ui-test.cjs tests/assembly-test.cjs tests/assembly-verify.cjs tests/check-motion.cjs tests/final-check.cjs tests/interaction-test.cjs tests/motion-test.cjs tests/site-test.cjs tests/test.cjs tests/validation-v2.cjs; do
   node "$test" || break
 done
 ```
+
+The browser checks support `CHROMIUM_PATH`
+for a custom installed browser executable. See `docs/operator-ui.md` for the updated key map.
