@@ -7,7 +7,7 @@
 ```html
 <iframe
   src="./excavator.html"
-  title="Interactive EX–240 excavator"
+  title="Interactive PR–180 piling rig and EX–240 excavator"
   sandbox="allow-scripts"
   loading="lazy"
   style="display:block;width:100%;height:min(900px,90vh);min-height:640px;border:0;border-radius:16px"
@@ -21,15 +21,16 @@ No external models, image assets, API keys, or network requests are required at 
 - Drag / scroll / pinch: orbit and zoom.
 - Arm: hold Q/E for boom, W/S for stick, A/D for bucket, and ←/→ for slew. On mobile use the joystick and sliders.
 - Travel: hold **↑ / ↓** to move and **J / L** to steer; release to decelerate. **Space** toggles the brake; **B** holds it temporarily.
-- **Return to start** resets the travel position, heading, track phase, and arm pose. **R** resets the arm only.
+- **Return to parking bay** returns the selected machine to its marked east-side bay and resets its travel position, heading, track phase, and working pose. The return is refused if that bay is occupied. **R** resets the active arm/rig controls only.
 - Switch to **03 / Assembly** to separate the machine systems. Use the slider, select a numbered marker or system index, and choose **Reassemble & return** (or press **Esc**) to exit.
 
 Click or tap inside an embedded frame before using keyboard shortcuts. Travel follows the undercarriage heading, not the upper body's slew angle.
 
 ## Modeling notes and limits
 
-- The construction yard is procedural, approximately **46 × 34 metres**, and includes access lanes, survey markings, foundations, material stacks, stockpiles, barriers, fencing, and an office.
-- A live site plan and chassis-footprint checks keep the tracked base within the yard and away from modeled obstacles. The yard is flat; track marks are visual. Cones tip, loose pipes move, and stockpiles deform locally with particles. There is no uneven-terrain solver, soil conservation, prop-to-prop solver, or full boom-to-obstacle collision system. See [interaction scope](operator-ui.md).
+- The construction yard is procedural, approximately **90 × 68 metres**, and includes access lanes, survey markings, foundations, material stacks, stockpiles, barriers, fencing, an office, and an east-side fleet apron with marked PR–180 and EX–240 bays.
+- Both rigs remain visible together. The selected machine is attached to the active drive root; the parked rig has an independent carrier and collision footprint. Switching restores each machine's last position, heading, and travel distance.
+- A live site plan shows both vehicles, while chassis-footprint checks keep the tracked base within the yard and away from modeled obstacles and the parked rig. The yard is flat; track marks are visual. Cones tip, loose pipes move, and stockpiles deform locally with particles. There is no uneven-terrain solver, soil conservation, prop-to-prop solver, or full boom-to-obstacle collision system. See [interaction scope](operator-ui.md).
 - The arm uses a lightweight damped-actuator model for startup lag, settling, and joint limits. It is intended for interactive presentation, not engineering analysis or certified hydraulic behavior.
 - The exploded view contains 13 system-level assemblies. The cab interior, engine/pumps, reservoir/valves, and electrical harness are illustrative models—not exact service parts, a bill of materials, or engineering CAD.
 

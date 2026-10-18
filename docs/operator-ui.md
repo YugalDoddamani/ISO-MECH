@@ -42,6 +42,10 @@ lock landscape after tapping MORE; unsupported browsers retain their normal orie
 Safe-area insets and a portrait rotation hint are included. OrbitControls retains pinch
 zoom; a stationary canvas long press restores the isometric camera.
 
+## Fleet parking and switching
+
+The site opens in a bird's-eye overview of the **90 × 68 m** yard, with the PR–180 and EX–240 visible in separate marked bays on the east-side apron. Switching transfers the outgoing rig to its own carrier and restores the incoming rig's last location, heading, and travel distance. The inactive machine remains visible and its chassis footprint blocks the active machine. **Return to parking bay** resets only the selected machine; it will not place it on top of another rig.
+
 ## Yard behavior
 
 - Ten safety cones tip and slide away from chassis contact.
