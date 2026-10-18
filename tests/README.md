@@ -27,12 +27,13 @@ Then run a check from another terminal, for example:
 node tests/yard-ui-test.cjs
 node tests/assembly-verify.cjs
 node tests/site-test.cjs
+node tests/fleet-test.cjs
 ```
 
 To run every check in sequence:
 
 ```bash
-for test in tests/yard-ui-test.cjs tests/assembly-test.cjs tests/assembly-verify.cjs tests/check-motion.cjs tests/final-check.cjs tests/interaction-test.cjs tests/motion-test.cjs tests/site-test.cjs tests/test.cjs tests/validation-v2.cjs; do
+for test in tests/yard-ui-test.cjs tests/assembly-test.cjs tests/assembly-verify.cjs tests/check-motion.cjs tests/final-check.cjs tests/interaction-test.cjs tests/motion-test.cjs tests/site-test.cjs tests/fleet-test.cjs tests/test.cjs tests/validation-v2.cjs; do
   node "$test" || break
 done
 ```

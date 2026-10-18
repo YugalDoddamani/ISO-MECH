@@ -1,6 +1,6 @@
 const { projectFile, fileUrl } = require('./helpers.cjs');
 const {chromium}=require('playwright');const fs=require('fs');const assert=require('node:assert');
-(async()=>{const b=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||undefined,args:['--no-sandbox','--enable-unsafe-swiftshader']});const p=await b.newPage({viewport:{width:1000,height:800}});const errors=[];p.on('pageerror',e=>errors.push(e.message));await p.route(/^https?:/,r=>r.abort());await p.goto(fileUrl('excavator.html'));await p.waitForFunction(()=>window.excavator);await p.evaluate(()=>{excavator.renderer.setPixelRatio(.4);excavator.renderer.shadowMap.enabled=false;});
+(async()=>{const b=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||undefined,args:['--no-sandbox','--enable-unsafe-swiftshader']});const p=await b.newPage({viewport:{width:1000,height:800}});const errors=[];p.on('pageerror',e=>errors.push(e.message));await p.route(/^https?:/,r=>r.abort());await p.goto(fileUrl('excavator.html'));await p.waitForFunction(()=>window.excavator);await p.evaluate(()=>excavator.switchVehicle('excavator'));await p.evaluate(()=>{excavator.renderer.setPixelRatio(.4);excavator.renderer.shadowMap.enabled=false;});
 // Keyboard-accessible single nudge goes through the actuator, and settles on target.
 await p.locator('[data-key="boom"][data-dir="1"]').dispatchEvent('click',{detail:0});await p.waitForTimeout(1300);assert(Math.abs((await p.evaluate(()=>excavator.angles.boom))-20)<.03);
 // Joint and clearance guard under a long manual command.

@@ -51,6 +51,7 @@ const { artifact } = require('./helpers.cjs');
       const restored = e.yard.bodies.every(b => !b.active && b.object.position.equals(b.home)) &&
         e.yard.heaps.every(h => h.geometry.attributes.position.array.every((v, i) => v === h.userData.original[i]));
       e.returnToStart();
+      e.switchVehicle('excavator');
       return { tipped, rolled, deformed, emitted, isolated, restored, particleCap: e.yard.particles.length,
         staticWall: !!e.siteCollision(-15.5, 10.6, 0),
         noStaticCones: !e.site.obstacles.some(o => o.name === 'safety cone' || o.name === 'pipe storage') };
