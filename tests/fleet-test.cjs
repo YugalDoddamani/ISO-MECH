@@ -110,6 +110,34 @@ const { artifact } = require('./helpers.cjs');
     assert.equal(restored.exDistance, 4.25);
     assert(restored.parent && restored.visible);
 
+    // Invalid and blocked switches must leave the active vehicle and its pose intact.
+    const switchGuards = await page.evaluate(() => {
+      const e = excavator, ex = e.fleet.vehicles.excavator;
+      const snapshot = () => ({
+        active: e.activeVehicle,
+        position: e.groups.driveRoot.position.toArray(),
+        heading: e.drive.heading,
+        distance: e.drive.distance,
+        drillActive: e.pileRig.root.parent === e.groups.driveRoot,
+        excavatorParked: e.machine.parent === ex.carrier,
+      });
+      const before = snapshot();
+      const invalid = e.switchVehicle('loader');
+      const afterInvalid = snapshot();
+      ex.carrier.position.copy(e.groups.driveRoot.position);
+      ex.carrier.rotation.y = e.drive.heading;
+      const blocked = e.switchVehicle('excavator');
+      const afterBlocked = snapshot();
+      // Restore the parked excavator bay for the remaining collision checks.
+      ex.carrier.position.set(33, 0, -6);
+      ex.carrier.rotation.y = -Math.PI / 4;
+      return { invalid, blocked, before, afterInvalid, afterBlocked };
+    });
+    assert.equal(switchGuards.invalid, false);
+    assert.equal(switchGuards.blocked, false);
+    assert.deepEqual(switchGuards.afterInvalid, switchGuards.before);
+    assert.deepEqual(switchGuards.afterBlocked, switchGuards.before);
+
     // SAT collision checks account for the parked chassis even at different headings.
     const collisions = await page.evaluate(() => {
       const e = excavator;
