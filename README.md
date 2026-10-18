@@ -17,8 +17,11 @@
 - **Operate the arm:** control the boom, stick, bucket, and upper-body slew with touch controls or the keyboard; play or pause a short motion demo.
 - **Drive the undercarriage:** accelerate, brake, and steer the two tracks independently. Track shoes, rollers, and ground impressions respond to signed travel distance.
 - **Explore the job site:** switch between a follow camera and a 46 × 34 m procedural yard with a live site plan, obstacles, and chassis-clearance checks.
+- **Interact with the yard:** push over cones, roll loose pipes, and deform stockpiles with loose-soil particles; reset the yard independently of the machine. These are lightweight effects rather than full digging physics.
 - **Inspect 13 systems:** separate the cab, power systems, arm, hydraulics, chassis, and crawlers; select a label to highlight a component and read its role.
 - **Use it on desktop or mobile:** orbit and zoom the model, choose camera presets, and use the responsive touch controls.
+
+See [the operator controls and interaction scope](docs/operator-ui.md) for the complete key map, mobile layout, and physics limitations.
 
 ## Technical challenges
 
@@ -34,7 +37,7 @@ The app is static and self-contained—Three.js, its controls, and procedural te
 python3 -m http.server 8000
 ```
 
-Open [http://localhost:8000](http://localhost:8000) in a WebGL-capable browser. Use **drag / scroll** to orbit and zoom; **arrow keys** or the on-screen controls for the arm; **W / S**, **A / D**, and **Space** to travel and brake; and **03 / Assembly** to inspect the exploded view.
+Open [http://localhost:8000](http://localhost:8000) in a WebGL-capable browser. Use **drag / scroll** to orbit and zoom; **Q / E**, **W / S**, and **A / D** for the arm; **← / →** to slew; **↑ / ↓** and **J / L** to drive and steer; **Space** to toggle the brake; and **03 / Assembly** to inspect the exploded view.
 
 ## Build and project layout
 

@@ -19,8 +19,8 @@ No external models, image assets, API keys, or network requests are required at 
 ## Controls
 
 - Drag / scroll / pinch: orbit and zoom.
-- Arm: hold the on-screen arrows, or select a joint and use the arrow keys.
-- Travel: hold **W / S** to move and **A / D** to steer; release to decelerate. Use **Space** or Brake for stronger braking.
+- Arm: hold Q/E for boom, W/S for stick, A/D for bucket, and ←/→ for slew. On mobile use the joystick and sliders.
+- Travel: hold **↑ / ↓** to move and **J / L** to steer; release to decelerate. **Space** toggles the brake; **B** holds it temporarily.
 - **Return to start** resets the travel position, heading, track phase, and arm pose. **R** resets the arm only.
 - Switch to **03 / Assembly** to separate the machine systems. Use the slider, select a numbered marker or system index, and choose **Reassemble & return** (or press **Esc**) to exit.
 
@@ -29,7 +29,7 @@ Click or tap inside an embedded frame before using keyboard shortcuts. Travel fo
 ## Modeling notes and limits
 
 - The construction yard is procedural, approximately **46 × 34 metres**, and includes access lanes, survey markings, foundations, material stacks, stockpiles, barriers, fencing, and an office.
-- A live site plan and chassis-footprint checks keep the tracked base within the yard and away from modeled obstacles. The yard is flat; track marks are visual. There is no soil deformation, uneven-terrain solver, or full boom-to-obstacle collision system.
+- A live site plan and chassis-footprint checks keep the tracked base within the yard and away from modeled obstacles. The yard is flat; track marks are visual. Cones tip, loose pipes move, and stockpiles deform locally with particles. There is no uneven-terrain solver, soil conservation, prop-to-prop solver, or full boom-to-obstacle collision system. See [interaction scope](operator-ui.md).
 - The arm uses a lightweight damped-actuator model for startup lag, settling, and joint limits. It is intended for interactive presentation, not engineering analysis or certified hydraulic behavior.
 - The exploded view contains 13 system-level assemblies. The cab interior, engine/pumps, reservoir/valves, and electrical harness are illustrative models—not exact service parts, a bill of materials, or engineering CAD.
 
