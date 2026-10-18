@@ -1,0 +1,25 @@
+{
+  "name": "iso-mech",
+  "version": "2.0.0",
+  "private": true,
+  "description": "IsoMech: an interactive construction-machinery studio (EX–240 excavator, PR–180 pile rig, crawler dozer, off-highway dumper) built with three.js and cannon-es.",
+  "license": "UNLICENSED",
+  "scripts": {
+    "start": "node scripts/serve.mjs",
+    "check": "node scripts/check.mjs",
+    "test": "node tests/run.cjs",
+    "test:unit": "node --test \"tests/unit/*.test.cjs\"",
+    "format": "prettier --write \"js/**/*.js\" \"css/**/*.css\" \"scripts/**/*.mjs\" \"tests/**/*.cjs\""
+  },
+  "devDependencies": {
+    "acorn": "8.19.0",
+    "cannon-es": "0.20.0",
+    "eslint-scope": "9.1.2",
+    "playwright": "1.64.1",
+    "prettier": "3.9.10",
+    "three": "0.128.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

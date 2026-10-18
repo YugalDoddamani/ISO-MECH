@@ -1,0 +1,39 @@
+/* IsoMech V2 · Final phone-layout overrides for the console. */
+@media (max-width: 760px) {
+  body:not(.drill-mode):not(.dozer-mode):not(.drive-console):not(.assembly-console) .panel.open #joints {
+    display: block !important;
+  }
+  .panel.open .joint-line {
+    display: flex;
+  }
+  .panel.open .joint-line > .arrow,
+  .panel.open .joint-icon {
+    display: none;
+  }
+  .panel.open .joint-track {
+    width: 100%;
+    margin: 0;
+  }
+  .panel.open .joint-caption {
+    padding-left: 0;
+  }
+  .console-hidden .help {
+    right: 12px !important;
+  }
+  .console-hidden .masthead {
+    right: 12px;
+  }
+  .console-hidden .site-map {
+    right: 12px;
+  }
+}
+@media (max-width: 760px) and (orientation: landscape) {
+  #openControls {
+    left: 12px;
+    right: auto;
+    top: 94px;
+  }
+  .console-hidden .site-map {
+    right: 48px;
+  }
+}

@@ -1,0 +1,369 @@
+/**
+ * IsoMech V2 · Exploded assembly
+ *
+ * Reversible exploded view of the excavator: guide lines, numbered labels, system selection,
+ * highlighting, explode/reassemble tweening and model picking.
+ *
+ * Classic script that shares the application scope with the other modules (see index.html for the
+ * load order). Names declared at the top level here are visible to every module loaded after it.
+ */
+'use strict';
+// Exploded view is a reversible presentation state, isolated from travel and hydraulics.
+const explodeGuides = group('Assembly guide lines', scene),
+  guideMaterial = new THREE.LineDashedMaterial({
+    color: 0x849278,
+    transparent: true,
+    opacity: 0.42,
+    dashSize: 0.09,
+    gapSize: 0.07,
+    depthTest: false,
+  });
+explodeGuides.visible = false;
+upper.userData.systemId = '02';
+engineDeck.userData.systemId = '04';
+const guideA = new THREE.Vector3(),
+  guideB = new THREE.Vector3(),
+  machineQ = new THREE.Quaternion(),
+  parentQ = new THREE.Quaternion(),
+  offsetVector = new THREE.Vector3();
+const labelLayer = document.createElement('div');
+labelLayer.id = 'assemblyLabels';
+labelLayer.innerHTML = '<svg class="label-leaders" aria-hidden="true"></svg>';
+stage.appendChild(labelLayer);
+const labelSvg = labelLayer.querySelector('svg');
+for (const p of explodedParts) {
+  const line = new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]),
+    guideMaterial
+  );
+  line.frustumCulled = false;
+  line.renderOrder = 2;
+  explodeGuides.add(line);
+  p.guide = line;
+  const button = document.createElement('button');
+  button.className = 'part-badge';
+  button.innerHTML = p.id + '<span>' + p.name + '</span>';
+  button.setAttribute('aria-label', 'Inspect ' + p.name);
+  button.onclick = () => selectSystem(p.id);
+  labelLayer.appendChild(button);
+  p.badge = button;
+  const leader = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  labelSvg.appendChild(leader);
+  p.leader = leader;
+  const row = document.createElement('button');
+  row.className = 'system-row';
+  row.dataset.system = p.id;
+  row.setAttribute('aria-pressed', 'false');
+  row.innerHTML = '<b>' + p.id + '</b><span>' + p.name + '</span>';
+  row.onclick = () => selectSystem(p.id);
+  $('#systemList').appendChild(row);
+}
+const originalMaterials = new Map(),
+  highlightMaterials = new Map();
+function systemOf(obj) {
+  let o = obj;
+  while (o && o !== machine.parent) {
+    if (o.userData.systemId) return o.userData.systemId;
+    o = o.parent;
+  }
+  return null;
+}
+function selectSystem(id) {
+  assembly.selected = assembly.selected === id ? null : id;
+  const part = explodedParts.find(p => p.id === assembly.selected);
+  $('#systemDetailTitle').textContent = part ? part.id + ' / ' + part.name : 'Anatomy of the machine';
+  $('#systemDetailText').textContent = part
+    ? part.description
+    : 'Select a numbered marker or a system below to inspect its role.';
+  $$('[data-system]').forEach(b => b.setAttribute('aria-pressed', b.dataset.system === assembly.selected));
+  for (const p of explodedParts) p.badge.classList.toggle('selected', p.id === assembly.selected);
+  machine.traverse(o => {
+    if (!o.isMesh) return;
+    if (!originalMaterials.has(o)) originalMaterials.set(o, o.material);
+    const original = originalMaterials.get(o);
+    if (systemOf(o) === assembly.selected && assembly.selected) {
+      const hi = m => {
+        if (!m.emissive) return m;
+        if (!highlightMaterials.has(m)) {
+          const copy = m.clone();
+          copy.emissive.set(0x7d5716);
+          copy.emissiveIntensity = 0.42;
+          highlightMaterials.set(m, copy);
+        }
+        return highlightMaterials.get(m);
+      };
+      o.material = Array.isArray(original) ? original.map(hi) : hi(original);
+    } else o.material = original;
+  });
+}
+function inspectAssembly() {
+  if (activeVehicle !== 'excavator') {
+    notify('Assembly inspection is available for the excavator');
+    return;
+  }
+  if (assembly.mode) return;
+  clearKeyboard();
+  joyEnd();
+  const savedSiteCamera = site.overview ? site.savedCamera : null;
+  if (site.overview) setSiteOverview(false, false);
+  site.viewBlend = 0;
+  updateFrustum();
+  stopHold();
+  releaseDrive();
+  drive.left = drive.right = 0;
+  mode = 'manual';
+  resetTween = null;
+  freezeHydraulics();
+  assembly.savedAngles = { ...angles };
+  assembly.savedCamera = savedSiteCamera || {
+    theta: deg(orbit.getAzimuthalAngle()),
+    phi: deg(orbit.getPolarAngle()),
+    zoom: camera.zoom,
+  };
+  assembly.mode = true;
+  assembly.pendingExit = null;
+  driveConsole = false;
+  document.body.classList.remove('drive-console');
+  document.body.classList.add('assembly-console');
+  $('#assemblyTab').setAttribute('aria-pressed', 'true');
+  $('#armTab').setAttribute('aria-pressed', 'false');
+  $('#travelTab').setAttribute('aria-pressed', 'false');
+  $('#assemblyPanel').setAttribute('aria-hidden', 'false');
+  $('#consoleTitle').textContent = 'Inside the machine.';
+  $('#consoleIntro').textContent = 'Separate the systems. Explore how every part comes together.';
+  $('#feel').disabled = true;
+  rock.pitch = rock.pitchV = rock.roll = rock.rollV = 0;
+  machine.rotation.x = machine.rotation.z = 0;
+  machine.position.y = 0;
+  auto = false;
+  orbit.autoRotate = false;
+  $('#orbit').setAttribute('aria-pressed', 'false');
+  view('iso');
+  if (viewTween) {
+    viewTween.diff = ((48 + deg(drive.heading) - viewTween.theta + 540) % 360) - 180;
+    viewTween.endPhi = 61;
+  }
+  setExplosion(1);
+  sync();
+}
+function setExplosion(value, immediate = false) {
+  value = clamp(value, 0, 1);
+  if (!assembly.mode) return;
+  if (value > 0) assembly.pendingExit = null;
+  assembly.target = value;
+  assembly.tween = {
+    from: assembly.value,
+    to: value,
+    start: performance.now(),
+    duration: immediate || reduced ? 0 : 1500,
+  };
+  $('#explodeToggle').textContent = value > 0.5 ? '↙ REASSEMBLE' : '↗ EXPLODE SYSTEMS';
+  $('#explodeToggle').setAttribute('aria-pressed', value > 0.5);
+}
+function requestAssemblyExit(travel) {
+  if (!assembly.mode) {
+    setConsole(travel);
+    return;
+  }
+  assembly.pendingExit = travel;
+  setExplosion(0);
+}
+function finishAssemblyExit() {
+  const travel = assembly.pendingExit;
+  assembly.mode = false;
+  assembly.pendingExit = null;
+  assembly.value = 0;
+  assembly.tween = null;
+  if (assembly.savedAngles) {
+    angles = { ...assembly.savedAngles };
+    freezeHydraulics();
+  }
+  applyExplosion(0);
+  assembly.savedAngles = null;
+  labelLayer.style.display = 'none';
+  explodeGuides.visible = false;
+  document.body.classList.remove('assembly-console');
+  $('#assemblyTab').setAttribute('aria-pressed', 'false');
+  $('#assemblyPanel').setAttribute('aria-hidden', 'true');
+  $('#feel').disabled = false;
+  if (assembly.selected) {
+    const old = assembly.selected;
+    selectSystem(old);
+  }
+  const saved = assembly.savedCamera;
+  if (saved) {
+    let start = deg(orbit.getAzimuthalAngle());
+    viewTween = {
+      start: performance.now(),
+      duration: reduced ? 0 : 700,
+      theta: start,
+      diff: ((saved.theta - start + 540) % 360) - 180,
+      phi: deg(orbit.getPolarAngle()),
+      endPhi: saved.phi,
+      zoom: camera.zoom,
+      zoomEnd: saved.zoom,
+    };
+  }
+  resize();
+  setConsole(travel);
+  notify('Reassembled · controls restored');
+}
+function stepAssembly(now) {
+  if (assembly.tween) {
+    const tr = assembly.tween,
+      t = tr.duration ? clamp((now - tr.start) / tr.duration, 0, 1) : 1;
+    assembly.value = tr.from + (tr.to - tr.from) * ease(t);
+    if (t === 1) {
+      assembly.value = tr.to;
+      assembly.tween = null;
+    }
+  }
+  applyExplosion(assembly.value);
+  $('#explodeRange').value = Math.round(assembly.value * 100);
+  $('#explodePercent').textContent = Math.round(assembly.value * 100) + '%';
+  $('#assemblyStatus').textContent = assembly.tween
+    ? 'TRANSITIONING'
+    : assembly.value < 0.01
+      ? 'ASSEMBLED'
+      : assembly.value > 0.99
+        ? 'FULLY EXPLODED'
+        : 'PARTIALLY EXPLODED';
+  if (assembly.pendingExit !== null && assembly.value === 0 && !assembly.tween) finishAssemblyExit();
+}
+function setOffset(item, fraction) {
+  item.obj.position.copy(item.home);
+  if (!fraction) return;
+  item.obj.parent.getWorldQuaternion(parentQ).invert();
+  offsetVector.copy(item.offset);
+  if (item.world !== false) offsetVector.applyQuaternion(machineQ).applyQuaternion(parentQ);
+  item.obj.position.addScaledVector(offsetVector, fraction);
+}
+function applyExplosion(fraction) {
+  for (const p of [...explodedExtra, ...explodedParts]) p.obj.position.copy(p.home);
+  if (assembly.savedAngles) {
+    for (const k in config) {
+      const home = config[k].home;
+      let delta = home - assembly.savedAngles[k];
+      if (k === 'slew') delta = ((delta + 540) % 360) - 180;
+      angles[k] = assembly.savedAngles[k] + delta * fraction;
+    }
+  }
+  apply();
+  updateHydraulics();
+  machine.getWorldQuaternion(machineQ);
+  for (const p of [...explodedExtra, ...explodedParts]) setOffset(p, fraction);
+  driveRoot.updateMatrixWorld(true);
+  const open = clamp(fraction / 0.32, 0, 1);
+  cabShell.visible = open < 1;
+  cabOpaqueMaterial.transparent = open > 0;
+  cabOpaqueMaterial.opacity = 1 - open;
+  cabOpaqueMaterial.depthWrite = open === 0;
+  for (const o of [engineCore, valveSystem, wireHarness, cabFrame, cabInterior]) o.visible = fraction > 0.015;
+  for (const child of cabShell.children) if (child.material) child.material.opacity = (1 - open) * 0.55;
+  explodeGuides.visible = assembly.mode && assembly.guides && fraction > 0.025;
+  for (const p of explodedParts) {
+    guideA.copy(p.home);
+    p.obj.parent.localToWorld(guideA);
+    guideB.copy(p.obj.position);
+    p.obj.parent.localToWorld(guideB);
+    const attr = p.guide.geometry.attributes.position;
+    attr.setXYZ(0, guideA.x, guideA.y, guideA.z);
+    attr.setXYZ(1, guideB.x, guideB.y, guideB.z);
+    attr.needsUpdate = true;
+    p.guide.computeLineDistances();
+    p.guide.visible = p.offset.lengthSq() > 0.001;
+  }
+  updateFrustum();
+}
+const projected = new THREE.Vector3();
+function updateAssemblyLabels() {
+  const show = assembly.mode && assembly.labels && assembly.value > 0.15;
+  labelLayer.style.display = show ? 'block' : 'none';
+  if (!show) return;
+  const width = stage.clientWidth,
+    height = stage.clientHeight;
+  labelSvg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+  camera.updateMatrixWorld();
+  const candidates = [];
+  for (const p of explodedParts) {
+    projected.copy(p.anchor);
+    p.obj.localToWorld(projected);
+    projected.project(camera);
+    const x = (projected.x * 0.5 + 0.5) * width,
+      y = (-projected.y * 0.5 + 0.5) * height;
+    const visible =
+      projected.z > -1 && projected.z < 1 && x > -50 && x < width + 50 && y > -50 && y < height + 50;
+    p.badge.hidden = !visible;
+    p.leader.style.display = visible ? '' : 'none';
+    if (visible)
+      candidates.push({
+        p,
+        x,
+        y,
+        bx: clamp(x + p.side * 26, 20, width - 20),
+        by: clamp(y - 20, 24, height - 28),
+      });
+  }
+  candidates.sort((a, b) => a.by - b.by);
+  for (let i = 0; i < candidates.length; i++) {
+    const a = candidates[i];
+    for (let j = 0; j < i; j++) {
+      const b = candidates[j];
+      if (Math.abs(a.bx - b.bx) < 35 && Math.abs(a.by - b.by) < 28) a.by = clamp(b.by + 28, 24, height - 25);
+    }
+    a.p.badge.style.left = a.bx + 'px';
+    a.p.badge.style.top = a.by + 'px';
+    a.p.badge.classList.toggle('label-left', a.bx > width * 0.65);
+    a.p.leader.setAttribute('x1', a.x);
+    a.p.leader.setAttribute('y1', a.y);
+    a.p.leader.setAttribute('x2', a.bx);
+    a.p.leader.setAttribute('y2', a.by);
+    a.p.leader.classList.toggle('active', a.p.id === assembly.selected);
+  }
+}
+$('#assemblyTab').onclick = inspectAssembly;
+$('#explodeToggle').onclick = () => setExplosion(assembly.target > 0.5 ? 0 : 1);
+$('#explodeRange').oninput = e => {
+  assembly.pendingExit = null;
+  setExplosion(+e.target.value / 100, true);
+};
+$('#showLabels').onclick = () => {
+  assembly.labels = !assembly.labels;
+  $('#showLabels').setAttribute('aria-pressed', assembly.labels);
+};
+$('#showGuides').onclick = () => {
+  assembly.guides = !assembly.guides;
+  $('#showGuides').setAttribute('aria-pressed', assembly.guides);
+};
+$('#assemblyDone').onclick = () => requestAssemblyExit(false);
+$('#armTab').onclick = () => (assembly.mode ? requestAssemblyExit(false) : setConsole(false));
+$('#travelTab').onclick = () => (assembly.mode ? requestAssemblyExit(true) : setConsole(true));
+const assemblyRaycaster = new THREE.Raycaster(),
+  pickPoint = new THREE.Vector2();
+let pickStart = null;
+renderer.domElement.addEventListener('pointerdown', e => {
+  pickStart = { x: e.clientX, y: e.clientY };
+});
+renderer.domElement.addEventListener('pointerup', e => {
+  if (
+    !assembly.mode ||
+    assembly.value < 0.1 ||
+    !pickStart ||
+    Math.hypot(e.clientX - pickStart.x, e.clientY - pickStart.y) > 5
+  )
+    return;
+  const r = renderer.domElement.getBoundingClientRect();
+  pickPoint.set(((e.clientX - r.left) / r.width) * 2 - 1, (-(e.clientY - r.top) / r.height) * 2 + 1);
+  assemblyRaycaster.setFromCamera(pickPoint, camera);
+  const hits = assemblyRaycaster.intersectObject(machine, true);
+  for (const hit of hits) {
+    let visible = true;
+    for (let o = hit.object; o; o = o.parent) if (!o.visible) visible = false;
+    if (!visible) continue;
+    const id = systemOf(hit.object);
+    if (id) {
+      selectSystem(id);
+      break;
+    }
+  }
+});

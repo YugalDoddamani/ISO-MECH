@@ -1,0 +1,11 @@
+# Standalone factories are kept exactly as they were written in ST.html.
+js/vehicles/pile-rig/model.js
+js/vehicles/bulldozer/model.js
+js/vehicles/dumper/model.js
+js/environment/soil-simulation.js
+js/physics/yard-physics.js
+js/physics/fixed-stepper.js
+
+node_modules/
+tests/artifacts/
+uploads/
