@@ -1,0 +1,182 @@
+/* IsoMech V2 · Dumper panel and free-explore mode. */
+#dumperPanel,
+.dumper-mobile-control {
+  display: none;
+}
+.dumper-mode #dumperPanel {
+  display: block;
+}
+.dumper-mode #joints,
+.dumper-mode .modebar,
+.dumper-mode .hint-block {
+  display: none !important;
+}
+.dumper-mode #rigPanel,
+.dumper-mode #dozerPanel {
+  display: none !important;
+}
+.dumper-mode .excavator-mobile-control,
+.dumper-mode .rig-mobile-control,
+.dumper-mode .dozer-mobile-control {
+  display: none !important;
+}
+.dumper-mode .dumper-mobile-control {
+  display: block !important;
+}
+.dumper-mode .mobile-sliders {
+  display: block;
+}
+.dumper-mode #mobileRigSpin {
+  display: none !important;
+}
+.drive-console #dumperPanel {
+  display: none !important;
+}
+.dumper-control {
+  display: block;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+  font: 11px monospace;
+}
+.dumper-control > span {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.dumper-control output,
+.dumper-mobile-control output {
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+}
+.dumper-control input,
+.dumper-mobile-control input {
+  display: block;
+  width: 100%;
+  height: 36px;
+  margin: 8px 0 0;
+  accent-color: var(--accent);
+  touch-action: none;
+  cursor: ew-resize;
+}
+.dumper-scale {
+  font: 9px/1.9 monospace;
+  color: #a2ad9a;
+}
+.dumper-control:focus-within {
+  color: var(--accent);
+}
+#dumpToggle {
+  margin-top: 16px;
+}
+.panel.open #dumperPanel {
+  display: none;
+}
+.dumper-mode:not(.drive-console) .panel.open #dumperPanel {
+  display: block;
+}
+.explore-mode #stage {
+  right: 0;
+}
+.explore-mode #panel {
+  display: none !important;
+}
+.explore-mode .masthead,
+.explore-mode .bottom {
+  right: 34px;
+}
+.explore-mode .site-map {
+  right: 30px;
+}
+.explore-mode .help {
+  right: 30px;
+}
+.explore-mode .compass-note {
+  display: block;
+  right: 34px;
+}
+.explore-mode .stage-hint {
+  left: 34px;
+  bottom: 89px;
+}
+@media (max-width: 760px) {
+  .dumper-mode .mobile-sliders {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .dumper-mode .mobile-sliders label {
+    margin: 4px 0;
+  }
+  .dumper-mode .mobile-sliders input {
+    margin: 0;
+  }
+  .panel.open #dumperPanel {
+    display: none;
+  }
+  .dumper-mode:not(.drive-console) .panel.open #dumperPanel {
+    display: block;
+  }
+  .explore-mode #stage {
+    inset: 0 0 75px;
+  }
+  .explore-mode .masthead {
+    right: 20px;
+  }
+  .explore-mode .bottom {
+    right: 15px;
+  }
+  .explore-mode .compass-note {
+    display: none;
+  }
+  .explore-mode .site-map {
+    right: 12px;
+  }
+  .explore-mode .help {
+    right: 12px;
+  }
+  .explore-mode #mobileGamepad {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr;
+    justify-items: center;
+    align-content: center;
+  }
+  .explore-mode #mobileGamepad .mobile-drive,
+  .explore-mode #mobileGamepad .mobile-sliders,
+  .explore-mode #mobileGamepad #moreControls {
+    display: none !important;
+  }
+  .explore-mode #mobileGamepad .joystick {
+    width: 104px;
+    height: 104px;
+  }
+  .explore-mode #mobileGamepad .joystick i {
+    width: 44px;
+    height: 44px;
+    left: 29px;
+    top: 29px;
+  }
+  .explore-mode .stage-hint {
+    display: block;
+    left: 12px;
+    bottom: calc(var(--pad-height) + 8px);
+    right: 12px;
+    text-align: center;
+    font-size: 7px;
+  }
+  .explore-mode #vehicleSwitch {
+    max-width: calc(100vw - 110px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+@media (max-width: 760px) and (orientation: portrait) {
+  .dumper-mode .mobile-sliders {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .explore-mode .stage-hint {
+    bottom: calc(var(--pad-height) + 8px);
+  }
+}

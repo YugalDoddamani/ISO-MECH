@@ -1,0 +1,466 @@
+/* IsoMech V2 · Vehicle studio: pile-rig and dozer panels, vehicle switch, loading screen, speed HUD, quick views. */
+/* Vehicle studio: preserve controls, map and telemetry on every viewport. */
+#rigPanel,
+.rig-mobile-control,
+#mobileRigSpin,
+#dozerPanel,
+.dozer-mobile-control {
+  display: none;
+}
+.drill-mode #rigPanel {
+  display: block;
+}
+.drill-mode #joints,
+.drill-mode .modebar {
+  display: none !important;
+}
+.drill-mode .excavator-mobile-control {
+  display: none !important;
+}
+.drill-mode .rig-mobile-control {
+  display: block !important;
+}
+.drill-mode .mobile-sliders {
+  display: block;
+}
+.drill-mode #mobileRigSpin {
+  display: block;
+}
+.dozer-mode #dozerPanel {
+  display: block;
+}
+.dozer-mode #joints,
+.dozer-mode .modebar {
+  display: none !important;
+}
+.dozer-mode #rigPanel {
+  display: none !important;
+}
+.dozer-mode .excavator-mobile-control,
+.dozer-mode .rig-mobile-control {
+  display: none !important;
+}
+.dozer-mode .dozer-mobile-control {
+  display: block !important;
+}
+.dozer-mode .mobile-sliders {
+  display: block;
+}
+.dozer-mode #mobileRigSpin {
+  display: none !important;
+}
+.drive-console #rigPanel,
+.drive-console #dozerPanel {
+  display: none !important;
+}
+.rig-control,
+.dozer-control {
+  display: block;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+  font: 11px monospace;
+}
+.rig-control > span,
+.dozer-control > span {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.rig-control output,
+.dozer-control output {
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+}
+.rig-control input,
+.dozer-control input {
+  display: block;
+  width: 100%;
+  height: 36px;
+  margin: 8px 0 0;
+  accent-color: var(--accent);
+  touch-action: none;
+  cursor: ew-resize;
+}
+.rig-scale,
+.dozer-scale {
+  font: 9px/1.9 monospace;
+  color: #a2ad9a;
+}
+.rig-control:focus-within,
+.dozer-control:focus-within {
+  color: var(--accent);
+}
+#rigSpin,
+#bladeReset {
+  margin-top: 16px;
+}
+#rigSpin[aria-pressed="true"],
+#mobileRigSpin[aria-pressed="true"] {
+  background: var(--accent);
+  color: #17201a;
+}
+#vehicleSwitch,
+#openControls {
+  position: absolute;
+  top: 61px;
+  left: 34px;
+  z-index: 8;
+  background: #26382f;
+  color: #f2c94c;
+  border: 1px solid #617363;
+  border-radius: 5px;
+  padding: 10px 12px;
+  font: 10px monospace;
+  letter-spacing: 0.5px;
+}
+#openControls {
+  left: auto;
+  right: 18px;
+  top: 18px;
+}
+#openControls[hidden] {
+  display: none;
+}
+#vehicleSwitch:hover {
+  background: #3d5143;
+}
+.heading {
+  top: 116px;
+}
+.heading h1 {
+  font-size: clamp(40px, 4.8vw, 64px);
+}
+#closePanel {
+  background: none;
+  border: 1px solid #58675b;
+  border-radius: 4px;
+  color: #e8ede9;
+  font-size: 20px;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.panel-top {
+  gap: 8px;
+}
+.panel-top > span:first-child {
+  font-size: 8px;
+  letter-spacing: 1px;
+}
+.console-hidden #panel {
+  display: none !important;
+}
+.console-hidden #stage {
+  right: 0;
+}
+.console-hidden .masthead,
+.console-hidden .bottom {
+  right: 34px;
+}
+.console-hidden .site-map {
+  right: 30px;
+}
+.console-hidden .help {
+  right: 30px;
+}
+#closeMap {
+  display: none;
+}
+.site-overview #closeMap {
+  display: block;
+  position: absolute;
+  right: 365px;
+  top: 135px;
+  z-index: 9;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #798974;
+  background: #edf0e5;
+  color: #273c2e;
+  font-size: 22px;
+  border-radius: 4px;
+}
+#speedHUD {
+  position: absolute;
+  left: 260px;
+  bottom: 130px;
+  display: flex;
+  gap: 7px;
+  align-items: baseline;
+  pointer-events: none;
+  background: #edf0e5cf;
+  border: 1px solid #c5cebc;
+  border-radius: 5px;
+  padding: 8px 10px;
+  color: #2b3b2e;
+}
+#speedHUD span {
+  font: 8px monospace;
+  letter-spacing: 1px;
+}
+#speedHUD strong {
+  font: 20px monospace;
+  font-variant-numeric: tabular-nums;
+}
+#speedHUD small {
+  font: 9px monospace;
+}
+#quickViews {
+  display: none;
+}
+.joint-track {
+  height: 36px;
+  min-height: 36px;
+  outline-offset: 1px;
+}
+.joint-track .fill {
+  top: 17px;
+}
+.joint-track .knob {
+  width: 14px;
+  height: 20px;
+  top: 8px;
+  border-radius: 4px;
+  transform: translateX(-50%);
+  background: var(--accent);
+}
+.joint-track:focus-visible {
+  outline: 2px solid var(--accent);
+}
+.loading {
+  position: fixed;
+  inset: 0;
+  transform: none;
+  z-index: 100;
+  background: #0e1410;
+  color: #d8e0da;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  font: 10px monospace;
+  letter-spacing: 1.3px;
+}
+.loading b {
+  font:
+    600 36px Arial,
+    sans-serif;
+  letter-spacing: -1px;
+  color: #f2c94c;
+}
+.loading-spinner {
+  display: block;
+  width: 26px;
+  height: 26px;
+  border: 2px solid #364439;
+  border-top-color: #f2c94c;
+  border-radius: 50%;
+  animation: load-spin 1s linear infinite;
+}
+@keyframes load-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (max-width: 1050px) and (min-width: 761px) {
+  #vehicleSwitch {
+    left: 24px;
+  }
+  .site-overview #closeMap {
+    right: 314px;
+  }
+}
+@media (max-width: 760px) {
+  #vehicleSwitch {
+    top: calc(50px + env(safe-area-inset-top));
+    left: 12px;
+    font-size: 9px;
+    padding: 10px;
+  }
+  .heading {
+    display: none;
+  }
+  #openControls {
+    top: 50px;
+    right: 48px;
+    left: auto;
+    z-index: 16;
+    font-size: 9px;
+  }
+  .telemetry {
+    display: flex !important;
+    left: 12px;
+    bottom: calc(var(--pad-height) + 10px);
+    gap: 15px;
+    background: #edf0e5e8;
+    padding: 7px 10px;
+    border-radius: 5px;
+    z-index: 4;
+  }
+  .telemetry label {
+    font: 7px monospace;
+    margin-bottom: 3px;
+    letter-spacing: 0.4px;
+  }
+  .telemetry strong {
+    font-size: 13px;
+  }
+  .controls-open .telemetry {
+    display: flex !important;
+  }
+  #speedHUD {
+    left: 12px;
+    bottom: calc(var(--pad-height) + 64px);
+    padding: 5px 9px;
+    z-index: 4;
+  }
+  #speedHUD strong {
+    font-size: 16px;
+  }
+  .site-map,
+  .controls-open .site-map {
+    display: block !important;
+    top: calc(96px + env(safe-area-inset-top));
+    right: 12px;
+    bottom: auto;
+    width: 100px;
+    padding: 7px;
+    z-index: 5;
+    background: #edf0e5ed;
+  }
+  .site-map #mapPosition {
+    font-size: 6px;
+  }
+  .site-map .map-title {
+    font-size: 7px;
+  }
+  .site-map #siteMapLabel {
+    font-size: 7px;
+  }
+  .site-overview #closeMap {
+    right: 116px;
+    top: calc(96px + env(safe-area-inset-top));
+    z-index: 10;
+  }
+  #quickViews {
+    position: absolute;
+    top: calc(94px + env(safe-area-inset-top));
+    left: 12px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background: #edf0e5e8;
+    padding: 5px 7px;
+    border-radius: 4px;
+    z-index: 6;
+    font: 8px monospace;
+  }
+  #quickViewSelect {
+    font: 10px monospace;
+    color: #273c2e;
+    border: 1px solid #a5b19e;
+    border-radius: 3px;
+    padding: 5px;
+    background: #edf0e5;
+    max-width: 96px;
+  }
+  .panel.open #rigPanel,
+  .panel.open #dozerPanel {
+    display: none;
+  }
+  .drill-mode:not(.drive-console) .panel.open #rigPanel {
+    display: block;
+  }
+  .dozer-mode:not(.drive-console) .panel.open #dozerPanel {
+    display: block;
+  }
+  .panel.open #closePanel {
+    display: block;
+  }
+  .panel.open .mobile-toggle {
+    display: none;
+  }
+  .console-hidden #stage {
+    right: 0;
+  }
+  .drill-mode .mobile-sliders,
+  .dozer-mode .mobile-sliders {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .drill-mode .mobile-sliders label,
+  .dozer-mode .mobile-sliders label {
+    margin: 4px 0;
+  }
+  .drill-mode .mobile-sliders input,
+  .dozer-mode .mobile-sliders input {
+    margin: 0;
+  }
+  #mobileRigSpin {
+    position: absolute;
+    left: 225px;
+    top: 12px;
+    background: #26382f;
+    color: #f2c94c;
+    border: 1px solid #617363;
+    padding: 8px;
+    font: 8px monospace;
+    border-radius: 4px;
+  }
+}
+@media (max-width: 760px) and (orientation: portrait) {
+  .drill-mode .mobile-sliders,
+  .dozer-mode .mobile-sliders {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  #mobileRigSpin {
+    left: auto;
+    right: 12px;
+    top: 114px;
+  }
+  .drill-mode #moreControls {
+    top: 155px;
+  }
+}
+@media (max-width: 760px) and (orientation: landscape) {
+  .site-map,
+  .controls-open .site-map {
+    top: 10px;
+    right: 48px;
+    width: 88px;
+  }
+  .site-map #mapPosition {
+    display: none;
+  }
+  .site-overview #closeMap {
+    right: 141px;
+    top: 12px;
+  }
+  .mobile-ready {
+    display: none;
+  }
+  .telemetry {
+    left: 190px;
+    bottom: calc(var(--pad-height) + 8px);
+  }
+  #speedHUD {
+    left: 12px;
+    bottom: calc(var(--pad-height) + 8px);
+  }
+  #quickViews {
+    top: 54px;
+    left: 250px;
+  }
+  .help {
+    top: 12px !important;
+  }
+  .masthead:after {
+    display: none;
+  }
+}

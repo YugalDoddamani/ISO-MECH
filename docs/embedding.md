@@ -1,41 +1,40 @@
-# Embedding and simulation scope
+# Embedding and hosting
 
-## Embed the standalone model
+## Host the studio
 
-`excavator.html` contains the app, vendored Three.js libraries, styles, and procedural textures. It can be hosted as a single static file or embedded in another page:
+ISO-MECH is a static site. Publish the repository root, which contains `index.html`, `css/` and `js/`, on any static host; GitHub Pages works as-is. The page loads three.js r128 and cannon-es 0.20.0 from `cdn.jsdelivr.net` with Subresource Integrity, so visitors need access to that CDN. If it is blocked, the loading screen reports that the 3D or physics engine could not start.
+
+No API keys, model downloads or build step are needed. All models and textures are procedural.
+
+## Embed it in another page
+
+Keep the folder structure together and point an iframe at `index.html`:
 
 ```html
 <iframe
-  src="./excavator.html"
-  title="Interactive PR–180 piling rig and EX–240 excavator"
+  src="https://yugaldoddamani.github.io/ISO-MECH/"
+  title="Interactive IsoMech construction machinery studio"
   sandbox="allow-scripts"
   loading="lazy"
   style="display:block;width:100%;height:min(900px,90vh);min-height:640px;border:0;border-radius:16px"
 ></iframe>
 ```
 
-No external models, image assets, API keys, or network requests are required at runtime.
+The app works inside `sandbox="allow-scripts"`. The frame gets an opaque origin: the CDN libraries still load (jsDelivr sends permissive CORS headers), and the first-use keyboard coach mark simply is not remembered, because storage is unavailable. Click or tap inside the frame before using keyboard shortcuts.
 
-## Controls
+Since V2 is split into separate files, it is no longer a single self-contained HTML file: an embed must load it by URL (as above), not by inlining the page with `srcdoc`.
 
-- Drag / scroll / pinch: orbit and zoom.
-- Arm: hold Q/E for boom, W/S for stick, A/D for bucket, and ←/→ for slew. On mobile use the joystick and sliders.
-- Travel: hold **↑ / ↓** to move and **J / L** to steer; release to decelerate. **Space** toggles the brake; **B** holds it temporarily.
-- **Return to parking bay** returns the selected machine to its marked east-side bay and resets its travel position, heading, track phase, and working pose. The return is refused if that bay is occupied. **R** resets the active arm/rig controls only.
-- Switch to **03 / Assembly** to separate the machine systems. Use the slider, select a numbered marker or system index, and choose **Reassemble & return** (or press **Esc**) to exit.
+## Controls and scope
 
-Click or tap inside an embedded frame before using keyboard shortcuts. Travel follows the undercarriage heading, not the upper body's slew angle.
+See the [operator guide](operator-ui.md) for the full key map, mobile layout, fleet, yard behaviour and simulation limits. In short:
 
-## Modeling notes and limits
+- **Camera:** drag, scroll or pinch to orbit and zoom; presets and auto orbit sit in the bottom bar.
+- **Machines:** cycle machines and free explore with the switch button. Q/E, W/S, A/D and ←/→ drive the active machine's work functions, ↑/↓ and J/L drive and steer, and Space brakes.
+- **Return to parking bay** resets the selected machine's travel and work pose if its bay is clear. **R** resets only the work pose, and **Reset Yard** restores props, soil and bore marks.
+- **03 / Assembly** separates the EX–240 into 13 systems; **Reassemble & return** (or Esc) exits.
 
-- The construction yard is procedural, approximately **90 × 68 metres**, and includes access lanes, survey markings, foundations, material stacks, stockpiles, barriers, fencing, an office, and an east-side fleet apron with marked PR–180 and EX–240 bays.
-- Both rigs remain visible together. The selected machine is attached to the active drive root; the parked rig has an independent carrier and collision footprint. Switching restores each machine's last position, heading, and travel distance.
-- A live site plan shows both vehicles, while chassis-footprint checks keep the tracked base within the yard and away from modeled obstacles and the parked rig. The yard is flat; track marks are visual. Cones tip, loose pipes move, and stockpiles deform locally with particles. There is no uneven-terrain solver, soil conservation, prop-to-prop solver, or full boom-to-obstacle collision system. See [interaction scope](operator-ui.md).
-- The arm uses a lightweight damped-actuator model for startup lag, settling, and joint limits. It is intended for interactive presentation, not engineering analysis or certified hydraulic behavior.
-- The exploded view contains 13 system-level assemblies. The cab interior, engine/pumps, reservoir/valves, and electrical harness are illustrative models—not exact service parts, a bill of materials, or engineering CAD.
+The yard is a procedural 90 × 68 m site with four fleet bays. Machine motion uses lightweight actuator and drive models stepped at a fixed 60 Hz. Soil is a volume-conserving heightfield, and loose props are cannon-es rigid bodies. These are presentation-grade interactions, not engineering analysis, certified hydraulic behaviour, or geotechnical or drilling physics. The cab interior, engine, pumps, valves and harness in the exploded view are illustrative, not service parts or CAD.
 
 ## Editable source
 
-`excavator-app.js` contains the model, interactions, camera, and dynamics. `page-shell.html` contains the UI and styles. Run `python3 scripts/assemble.py` to regenerate `index.html` and the self-contained `excavator.html`.
-
-An earlier assembly build is kept in [`previous-assembly-version/`](../previous-assembly-version/).
+There is no build step: edit the files in `css/` and `js/` directly and reload. [Architecture](architecture.md) explains the module order and the rules that `npm run check` enforces.

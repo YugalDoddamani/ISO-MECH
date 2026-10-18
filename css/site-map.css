@@ -1,0 +1,150 @@
+/* IsoMech V2 · Live site plan and overview toggle. */
+.compass-note {
+  display: none;
+}
+.assembly-console .compass-note {
+  display: block;
+}
+.site-map {
+  position: absolute;
+  right: 364px;
+  bottom: 126px;
+  width: 138px;
+  border: 1px solid #a6b39488;
+  border-radius: 4px;
+  background: #eceee2e8;
+  color: #54664a;
+  padding: 9px;
+  text-align: left;
+  box-shadow: 0 3px 15px #34452a08;
+  cursor: pointer;
+  z-index: 2;
+}
+.map-title {
+  display: flex;
+  justify-content: space-between;
+  font: 8px monospace;
+  letter-spacing: 0.7px;
+  margin-bottom: 5px;
+}
+.map-title span {
+  font-size: 6px;
+  color: #8b997d;
+  letter-spacing: 0;
+}
+.site-map svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.site-map #mapPosition {
+  font: 7px monospace;
+  letter-spacing: 0.1px;
+  margin-top: 5px;
+  color: #8b987d;
+}
+.site-map #siteMapLabel {
+  font: 8px monospace;
+  margin-top: 6px;
+  letter-spacing: 0.5px;
+}
+.site-map:hover,
+.site-map[aria-pressed="true"] {
+  border-color: #9c8c48;
+}
+.site-map[aria-pressed="true"] #siteMapLabel {
+  color: #947620;
+}
+.assembly-console .site-map {
+  display: none;
+}
+.site-overview .heading .tag {
+  color: #8c753b;
+  border-color: #b9ae7f;
+}
+#travelMapButton {
+  display: block;
+  margin: 10px 0 0 auto;
+  border: 0;
+  padding: 0;
+  background: none;
+  color: #d7be76;
+  font: 8px monospace;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+}
+#travelMapButton:hover {
+  color: #ffe4a2;
+}
+.site-travel-footer #clearTracks {
+  border: 0;
+  background: none;
+  color: #839777;
+  font: 7px monospace;
+  letter-spacing: 1px;
+  cursor: pointer;
+  display: block;
+  margin: 11px auto 0;
+  padding: 0;
+}
+.site-travel-footer #clearTracks:hover {
+  color: #d3dfbd;
+}
+@media (max-width: 1050px) and (min-width: 761px) {
+  .site-map {
+    right: 314px;
+    width: 125px;
+    bottom: 128px;
+  }
+}
+@media (max-width: 760px) {
+  .site-map {
+    right: 20px;
+    bottom: 174px;
+    width: 104px;
+    padding: 7px;
+  }
+  .map-title {
+    font-size: 7px;
+    margin-bottom: 4px;
+  }
+  .map-title span {
+    font-size: 5px;
+  }
+  .site-map #mapPosition {
+    font-size: 6px;
+    letter-spacing: -0.15px;
+  }
+  .site-map #siteMapLabel {
+    font-size: 7px;
+    letter-spacing: 0.1px;
+  }
+  .controls-open .site-map {
+    display: none;
+  }
+  .panel.open #travelMapButton {
+    margin-top: 7px;
+    font-size: 7px;
+  }
+  .panel.open .drive-readout {
+    padding-bottom: 8px;
+  }
+  .panel.open .site-travel-footer {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .panel.open .site-travel-footer #homeDrive {
+    flex: 1;
+    margin-top: 10px;
+    font-size: 8px;
+  }
+  .panel.open .site-travel-footer #clearTracks {
+    width: 76px;
+    flex-shrink: 0;
+    margin-top: 10px;
+    font-size: 6px;
+    line-height: 1.8;
+    letter-spacing: 0.5px;
+  }
+}

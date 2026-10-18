@@ -1,0 +1,237 @@
+/* IsoMech V2 · Phone layout: canvas and dedicated gamepad regions, sheet console, portrait variant. */
+@media (max-width: 760px) {
+  :root {
+    --pad-height: clamp(216px, 30dvh, 320px);
+  }
+  #stage,
+  .controls-open #stage {
+    top: 0;
+    bottom: var(--pad-height);
+    right: 0;
+  }
+  #stage:after {
+    display: none;
+  }
+  .heading,
+  .telemetry,
+  .bottom,
+  .compass-note,
+  .stage-hint,
+  .site-map {
+    display: none;
+  }
+  .masthead {
+    top: calc(10px + env(safe-area-inset-top));
+    left: 12px;
+    right: 12px;
+  }
+  .brand {
+    font-size: 9px;
+    letter-spacing: 1px;
+    padding: 9px 12px;
+    background: #e8ede9cc;
+    border-radius: 30px;
+    backdrop-filter: blur(10px);
+  }
+  .edition {
+    display: none;
+  }
+  .mobile-ready {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #0e1410db;
+    color: #e8ede9;
+    border-radius: 20px;
+    padding: 9px;
+    font: 9px monospace;
+  }
+  .mobile-ready i {
+    width: 5px;
+    height: 5px;
+    background: #6fcf97;
+    border-radius: 50%;
+  }
+  #mobileGamepad {
+    display: grid;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: var(--pad-height);
+    background: var(--bg-panel);
+    color: var(--text);
+    padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
+    gap: 10px;
+    grid-template-columns: 204px 84px minmax(130px, 1fr);
+    align-items: center;
+    overflow: auto;
+    border-top: 1px solid var(--border);
+    box-shadow: inset 0 1px #ffffff0a;
+  }
+  #mobileGamepad .drive-pad {
+    grid-template-columns: repeat(3, 64px);
+    grid-template-rows: repeat(3, 64px);
+    gap: 4px;
+    margin: 0;
+  }
+  #mobileGamepad .drive-pad button {
+    min-width: 64px;
+    min-height: 64px;
+  }
+  #mobileGamepad .drive-pad kbd {
+    display: none;
+  }
+  #mobileGamepad .drive-pad span {
+    font-size: 7px;
+  }
+  .joystick {
+    width: 80px;
+    height: 80px;
+    border: 1px solid #506056;
+    border-radius: 50%;
+    touch-action: none;
+    position: relative;
+    background:
+      linear-gradient(transparent 49%, #506056 50%, transparent 51%),
+      linear-gradient(90deg, transparent 49%, #506056 50%, transparent 51%);
+  }
+  .joystick span {
+    position: absolute;
+    top: -22px;
+    font: 8px monospace;
+    white-space: nowrap;
+  }
+  .joystick i {
+    position: absolute;
+    left: 21px;
+    top: 21px;
+    width: 36px;
+    height: 36px;
+    background: var(--accent);
+    border-radius: 50%;
+    transition: transform 80ms ease-out;
+    pointer-events: none;
+  }
+  .mobile-sliders label {
+    display: block;
+    font: 9px monospace;
+    margin: 10px 0;
+  }
+  .mobile-sliders output {
+    color: var(--accent);
+    float: right;
+  }
+  .mobile-sliders input {
+    height: 48px;
+    width: 100%;
+    accent-color: var(--accent);
+    touch-action: none;
+  }
+  #moreControls {
+    position: absolute;
+    left: 230px;
+    bottom: 12px;
+    padding: 12px;
+    background: var(--bg-elevated);
+    border: 1px solid #45504a;
+    color: var(--text);
+    font: 10px monospace;
+  }
+  #panel {
+    display: none;
+  }
+  .panel.open {
+    display: flex !important;
+    position: absolute;
+    inset: auto 0 0 0 !important;
+    width: 100%;
+    height: 80dvh !important;
+    max-height: 80dvh;
+    padding: 0 16px calc(24px + env(safe-area-inset-bottom));
+    z-index: 20;
+    border-radius: 16px 16px 0 0;
+    overflow: auto;
+  }
+  .panel.open .panel-top {
+    position: sticky;
+    top: 0;
+    background: var(--bg-panel);
+    z-index: 1;
+    flex-shrink: 0;
+  }
+  .panel.open #joints {
+    display: none !important;
+  }
+  .panel.open .keyboard-legend {
+    display: none;
+  }
+  .panel.open .console-tabs {
+    flex-shrink: 0;
+  }
+  .assembly-console #mobileGamepad {
+    pointer-events: none;
+    opacity: 0.4;
+  }
+  .assembly-console .panel.open #systemList {
+    grid-template-columns: 1fr;
+    max-height: none;
+  }
+  .panel.open .drive-pad {
+    grid-template-rows: repeat(3, 64px);
+  }
+  .panel.open .drive-pad button {
+    min-width: 64px;
+  }
+  .helpbox {
+    z-index: 30;
+    inset: 60px 12px auto;
+    width: auto;
+    max-height: 70dvh;
+  }
+  .help {
+    top: calc(12px + env(safe-area-inset-top));
+    right: 12px;
+    top: calc(52px + env(safe-area-inset-top));
+    z-index: 31;
+  }
+  .status {
+    bottom: calc(var(--pad-height) + 10px);
+    z-index: 10;
+  }
+  .panel.open .panel-footer {
+    display: none;
+  }
+}
+@media (max-width: 760px) and (orientation: portrait) {
+  :root {
+    --pad-height: 50dvh;
+  }
+  #mobileGamepad {
+    grid-template-columns: 204px 1fr;
+    grid-template-rows: 204px auto;
+    align-content: start;
+  }
+  .joystick {
+    justify-self: center;
+  }
+  .mobile-sliders {
+    grid-column: 1/-1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  #moreControls {
+    left: auto;
+    right: 12px;
+    bottom: auto;
+    top: 155px;
+  }
+  .masthead:after {
+    content: "Rotate for a wider view";
+    position: absolute;
+    top: 44px;
+    font: 9px monospace;
+    color: #526052;
+  }
+}
