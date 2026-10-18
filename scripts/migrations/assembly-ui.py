@@ -1,5 +1,5 @@
 from pathlib import Path
-p=Path('/home/user');s=(p/'page-shell.html').read_text()
+p=Path(__file__).resolve().parents[2];s=(p/'page-shell.html').read_text()
 s=s.replace('02 / TRAVEL <span>NEW</span></button>', '02 / TRAVEL</button><button id="assemblyTab" aria-pressed="false">03 / ASSEMBLY</button>')
 markup='''<section id="assemblyPanel" aria-label="Exploded assembly controls" aria-hidden="true">
 <div class="assembly-primary"><button id="explodeToggle" aria-pressed="false">↗ EXPLODE SYSTEMS</button><div class="separation"><label for="explodeRange">SEPARATION <output id="explodePercent">0%</output></label><input type="range" id="explodeRange" min="0" max="100" step="1" value="0" aria-label="Exploded view separation percentage"></div></div>

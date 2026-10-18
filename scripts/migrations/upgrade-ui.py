@@ -1,5 +1,5 @@
 from pathlib import Path
-p=Path('/home/user');s=(p/'page-shell.html').read_text()
+p=Path(__file__).resolve().parents[2];s=(p/'page-shell.html').read_text()
 s=s.replace('<h2>Make your move.</h2><p class="panel-intro">Explore the mechanics. Select a joint and bring the machine to life.</p>', '<h2 id="consoleTitle">Make your move.</h2><p class="panel-intro" id="consoleIntro">Explore the mechanics. Feel the hydraulic response at every joint.</p><div class="console-tabs" role="group" aria-label="Control section"><button id="armTab" aria-pressed="true">01 / ARM</button><button id="travelTab" aria-pressed="false">02 / TRAVEL <span>NEW</span></button></div>')
 drive='''<section id="drivePanel" aria-label="Travel controls" aria-hidden="true">
  <div class="drive-readout"><div><label>GROUND SPEED</label><div><strong id="travelVelocity">0.0</strong><small> km/h</small></div></div><div class="gear"><span id="travelGear">PARKED</span><small id="travelDistance">0.0 m</small></div></div>

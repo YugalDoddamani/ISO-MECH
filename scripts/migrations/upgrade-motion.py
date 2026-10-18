@@ -1,5 +1,5 @@
 from pathlib import Path
-p=Path('/home/user');s=(p/'excavator-app.js').read_text()
+p=Path(__file__).resolve().parents[2];s=(p/'excavator-app.js').read_text()
 s=s.replace("const machine=new THREE.Group();machine.name='EX240';scene.add(machine);", "const driveRoot=new THREE.Group();driveRoot.name='Travel and heading';scene.add(driveRoot);\nconst machine=new THREE.Group();machine.name='EX240';driveRoot.add(machine);")
 s=s.replace("const half=1.48", "const trackSystems=[];\nconst half=1.48")
 s=s.replace("const tr=group(side===1?'Left crawler':'Right crawler',under,0,0,side*1.13);", "const tr=group(side===-1?'Left crawler':'Right crawler',under,0,0,side*1.13),wheels=[];")
