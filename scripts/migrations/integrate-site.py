@@ -1,7 +1,7 @@
 from pathlib import Path
-p=Path('/home/user');s=(p/'excavator-app.js').read_text()
+p=Path(__file__).resolve().parents[2];s=(p/'excavator-app.js').read_text()
 s=s.replace("const assembly={mode:false", "const site={overview:false,viewBlend:0,savedCamera:null,obstacles:[],lastCollision:-10000};\nconst assembly={mode:false")
-a=s.index('// Stage: a matte plinth');b=s.index('// Joint state and UI.',a);s=s[:a]+(p/'site-geometry.js').read_text()+'\n'+s[b:]
+a=s.index('// Stage: a matte plinth');b=s.index('// Joint state and UI.',a);s=s[:a]+(p/'scripts'/'fragments'/'site-geometry.js').read_text()+'\n'+s[b:]
 s=s.replace("function view(name,instant=false){const v=", "function view(name,instant=false){if(site.overview)setSiteOverview(false,false);const v=")
 s=s.replace("Hold to travel. Release to slow down. The camera follows your machine.", "Drive the access lanes. Use the site plan to explore the construction yard.")
 s=s.replace("for(const t of trackSystems){t.phase=t.distance=0;t.dirty=true;}", "for(const t of trackSystems){t.phase=t.distance=0;t.dirty=true;}resetTrailCursors();")
@@ -16,7 +16,7 @@ assert old in s;s=s.replace(old,new)
 s=s.replace("function inspectAssembly(){if(assembly.mode)return;", "function inspectAssembly(){if(assembly.mode)return;const savedSiteCamera=site.overview?site.savedCamera:null;if(site.overview)setSiteOverview(false,false);site.viewBlend=0;updateFrustum();")
 s=s.replace("assembly.savedCamera={theta:deg(orbit.getAzimuthalAngle()),phi:deg(orbit.getPolarAngle()),zoom:camera.zoom};", "assembly.savedCamera=savedSiteCamera||{theta:deg(orbit.getAzimuthalAngle()),phi:deg(orbit.getPolarAngle()),zoom:camera.zoom};")
 s=s.replace("baseHalf=normal+(expanded-normal)*assembly.value;", "const close=normal+(expanded-normal)*assembly.value,siteHalf=Math.max(22.5,30/aspect);baseHalf=close+(siteHalf-close)*site.viewBlend;")
-s=s.replace("apply();updateHydraulics();sync();$('#loading').remove();", (p/'site-system.js').read_text()+"\napply();updateHydraulics();sync();$('#loading').remove();")
+s=s.replace("apply();updateHydraulics();sync();$('#loading').remove();", (p/'scripts'/'fragments'/'site-system.js').read_text()+"\napply();updateHydraulics();sync();$('#loading').remove();")
 s=s.replace(" followMachine(elapsed);", " updateSiteFrame(elapsed);followMachine(elapsed);")
 s=s.replace("uiTime=0;sync();const bearing", "uiTime=0;sync();updateSiteUI();const bearing")
 s=s.replace("assembly,explodedParts,inspectAssembly", "site,setSiteOverview,clearGroundTracks,siteCollision,trailMesh,assembly,explodedParts,inspectAssembly")

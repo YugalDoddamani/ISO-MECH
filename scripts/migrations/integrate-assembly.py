@@ -1,5 +1,5 @@
 from pathlib import Path
-p=Path('/home/user');s=(p/'excavator-app.js').read_text()
+p=Path(__file__).resolve().parents[2];s=(p/'excavator-app.js').read_text()
 s=s.replace("const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;", "const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;\nconst assembly={mode:false,value:0,target:0,tween:null,pendingExit:null,savedAngles:null,savedCamera:null,selected:null,labels:true,guides:true};")
 a=s.index('cylinder(.87,.20,M.black,under');b=s.index('// Independent slewing body.',a)
 s=s[:a]+"const slewGroup=group('Slewing bearing',under);\n"+s[a:b].replace(',under,',',slewGroup,')+s[b:]
@@ -8,7 +8,7 @@ s=s[:a]+"const housing=group('Body housing and counterweight',upper);\n"+s[a:b].
 a=s.index('// Far side engine deck.');b=s.index('// Cab, mounted',a)
 s=s[:a]+"const engineDeck=group('Service deck cover',upper);\n"+s[a:b].replace(',upper,',',engineDeck,')+s[b:]
 s=s.replace('outlined(extrude(cabProfile,1.05', 'const cabShell=outlined(extrude(cabProfile,1.05')
-s=s.replace('// Stage: a matte plinth', (p/'assembly-geometry.js').read_text()+'\n// Stage: a matte plinth')
+s=s.replace('// Stage: a matte plinth', (p/'scripts'/'fragments'/'assembly-geometry.js').read_text()+'\n// Stage: a matte plinth')
 s=s.replace("$('#modeStatus').textContent=driveConsole?", "$('#modeStatus').textContent=assembly.mode?'INSPECTION MODE':driveConsole?")
 s=s.replace("function move(key,delta){", "function move(key,delta){if(assembly.mode)return false;")
 s=s.replace("const k=e.key;if(handleDriveKey", "const k=e.key;if(assembly.mode){if(k==='Escape'){e.preventDefault();requestAssemblyExit(false);}else if(/^[wasdr]$/i.test(k)||k.startsWith('Arrow'))e.preventDefault();return;}if(handleDriveKey")
@@ -18,7 +18,7 @@ s=s.replace("function handleDriveKey(e,down){", "function handleDriveKey(e,down)
 s=s.replace("function returnToStart(){", "function returnToStart(){if(assembly.mode)return;")
 s=s.replace("function resize(){const w=stage.clientWidth,h=stage.clientHeight;aspect=w/h;renderer.setSize(w,h,false);baseHalf=Math.max(window.innerWidth<=760?3.9:5.3,(window.innerWidth<=760?4.9:6.7)/aspect);camera.left=-baseHalf*aspect;camera.right=baseHalf*aspect;camera.top=baseHalf;camera.bottom=-baseHalf;camera.updateProjectionMatrix();}", "function resize(){const w=stage.clientWidth,h=stage.clientHeight;aspect=w/h;renderer.setSize(w,h,false);updateFrustum();}")
 s=s.replace('desiredTarget.set(driveRoot.position.x+1,1.85,driveRoot.position.z);',"desiredTarget.set(driveRoot.position.x+1+(1.5*Math.cos(drive.heading)-1)*assembly.value,1.85+1.65*assembly.value,driveRoot.position.z-1.5*Math.sin(drive.heading)*assembly.value);")
-s=s.replace("apply();updateHydraulics();sync();$('#loading').remove();",(p/'assembly-system.js').read_text()+"\napply();updateHydraulics();sync();$('#loading').remove();")
+s=s.replace("apply();updateHydraulics();sync();$('#loading').remove();",(p/'scripts'/'fragments'/'assembly-system.js').read_text()+"\napply();updateHydraulics();sync();$('#loading').remove();")
 s=s.replace(' if(resetTween){const t=', ' if(!assembly.mode){\n if(resetTween){const t=')
 s=s.replace(' updateTrackMeshes();followMachine(elapsed);apply();updateHydraulics();', ' updateTrackMeshes();apply();updateHydraulics();\n }else{stepAssembly(now);}\n followMachine(elapsed);')
 s=s.replace('camera.zoom=viewTween.zoom+(1-viewTween.zoom)*u;', 'camera.zoom=viewTween.zoom+((viewTween.zoomEnd??1)-viewTween.zoom)*u;')
