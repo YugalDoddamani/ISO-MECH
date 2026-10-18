@@ -1,0 +1,757 @@
+<title>6×6 Rescue Truck</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
+<style>
+  /* Layout: full-bleed orthographic stage; title and bearing readout float on top, camera dock sits at the bottom. */
+  :root {
+    --bg: #d3dae0;
+    --ground: #e7ecf0;
+    --ink: #161b21;
+    --ink-2: #47525d;
+    --line: rgba(22, 27, 33, 0.18);
+    --panel: rgba(244, 247, 249, 0.78);
+    --accent: #b51c2d;
+    --accent-ink: #ffffff;
+    --font-display: 'Barlow Condensed', 'Arial Narrow', system-ui, sans-serif;
+    --font-body: 'Barlow', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #10151a;
+      --ground: #1b222a;
+      --ink: #e9eef3;
+      --ink-2: #9aa6b2;
+      --line: rgba(233, 238, 243, 0.18);
+      --panel: rgba(20, 26, 33, 0.78);
+      --accent: #e23a50;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #10151a;
+    --ground: #1b222a;
+    --ink: #e9eef3;
+    --ink-2: #9aa6b2;
+    --line: rgba(233, 238, 243, 0.18);
+    --panel: rgba(20, 26, 33, 0.78);
+    --accent: #e23a50;
+    color-scheme: dark;
+  }
+
+  html { box-sizing: border-box; }
+  html, body { height: 100%; }
+  *, *::before, *::after { box-sizing: inherit; }
+  body {
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 16px;
+    padding-block: 16px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .stage { position: absolute; inset: 0; z-index: 0; }
+  .stage canvas { display: block; width: 100%; height: 100%; cursor: grab; touch-action: none; }
+  .stage canvas:active { cursor: grabbing; }
+  .fail { margin: 0; padding: 24px; color: var(--ink-2); }
+
+  .top {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    pointer-events: none;
+  }
+  .id { min-width: 0; }
+  .kicker {
+    font: 600 12px/1 var(--font-display);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  h1 {
+    margin: 8px 0 0;
+    font: 700 clamp(30px, 6vw, 46px)/0.95 var(--font-display);
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
+    text-wrap: balance;
+  }
+  .hint { margin: 10px 0 0; font-size: 13px; line-height: 1.4; color: var(--ink-2); max-width: 30ch; }
+
+  .read { margin: 0; display: flex; gap: 20px; text-align: right; }
+  .read dt {
+    font: 600 11px/1 var(--font-display);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+  }
+  .read dd {
+    margin: 6px 0 0;
+    font: 600 24px/1 var(--font-display);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+  }
+
+  .dock {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+  }
+  .group {
+    display: flex;
+    flex-wrap: wrap;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: var(--panel);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    overflow: hidden;
+  }
+  .group button {
+    min-height: 44px;
+    padding: 0 16px;
+    border: 0;
+    border-left: 1px solid var(--line);
+    background: transparent;
+    color: var(--ink);
+    font: 600 14px/1 var(--font-display);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+  .group button:first-child { border-left: 0; }
+  .group button:hover { background: var(--line); }
+  .group button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+  .group button:focus-visible { outline: 2px solid var(--ink); outline-offset: -4px; }
+</style>
+
+<div class="stage" id="stage"></div>
+
+<header class="top">
+  <div class="id">
+    <div class="kicker">Heavy rescue</div>
+    <h1>6×6 Rescue Truck</h1>
+    <p class="hint">Drag to orbit. Scroll or pinch to zoom.</p>
+  </div>
+  <dl class="read">
+    <div><dt>Bearing</dt><dd id="bearing">045°</dd></div>
+    <div><dt>Elevation</dt><dd id="elev">35°</dd></div>
+  </dl>
+</header>
+
+<nav class="dock" aria-label="Scene controls">
+  <div class="group" role="group" aria-label="Camera view">
+    <button type="button" data-view="iso" aria-pressed="false">Iso</button>
+    <button type="button" data-view="front" aria-pressed="false">Front</button>
+    <button type="button" data-view="side" aria-pressed="false">Side</button>
+    <button type="button" data-view="rear" aria-pressed="false">Rear</button>
+    <button type="button" data-view="top" aria-pressed="false">Top</button>
+  </div>
+  <div class="group" role="group" aria-label="Animation">
+    <button type="button" data-toggle="spin" aria-pressed="true">Spin</button>
+    <button type="button" data-toggle="wheels" aria-pressed="true">Wheels</button>
+    <button type="button" data-toggle="strobes" aria-pressed="true">Strobes</button>
+  </div>
+</nav>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  /* ------------------------------------------------------------------
+     Setup
+     Units are metres. The truck faces +X, its right side is +Z, up is +Y.
+     ------------------------------------------------------------------ */
+  const stage = document.getElementById('stage');
+  const fail = (msg) => { stage.innerHTML = '<p class="fail">' + msg + '</p>'; };
+  if (!window.THREE || !THREE.OrbitControls) { fail('Three.js could not be loaded. Check the connection and reload.'); return; }
+
+  let renderer;
+  try {
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  } catch (err) { fail('WebGL is not available in this browser.'); return; }
+
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.0;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  stage.appendChild(renderer.domElement);
+
+  const tok = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const reduceMotion = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const state = { spin: !reduceMotion, wheels: !reduceMotion, strobes: !reduceMotion, view: null };
+
+  const scene = new THREE.Scene();
+
+  /* ------------------------------------------------------------------
+     Orthographic camera at the true isometric angle (45° azimuth, 35.264° elevation)
+     ------------------------------------------------------------------ */
+  const HALF = 5;                       // half of the visible height at zoom 1
+  const DIST = 40;
+  const TARGET = new THREE.Vector3(0, 1.8, 0);
+  const camera = new THREE.OrthographicCamera(-HALF, HALF, HALF, -HALF, 0.1, 200);
+  const rad = (d) => d * Math.PI / 180;
+
+  function placeCamera(theta, phi) {
+    const s = Math.sin(phi);
+    camera.position.set(
+      TARGET.x + DIST * s * Math.sin(theta),
+      TARGET.y + DIST * Math.cos(phi),
+      TARGET.z + DIST * s * Math.cos(theta)
+    );
+    camera.lookAt(TARGET);
+  }
+
+  const controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.target.copy(TARGET);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.08;
+  controls.enablePan = false;
+  controls.minZoom = 0.4;
+  controls.maxZoom = 3.2;
+  controls.minPolarAngle = 0.0001;
+  controls.maxPolarAngle = Math.PI / 2 - 0.02;
+  controls.autoRotate = state.spin;
+  controls.autoRotateSpeed = 1.5;
+
+  /* ------------------------------------------------------------------
+     Lighting: soft hemisphere + shadow-casting key + cool fill
+     ------------------------------------------------------------------ */
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x7d8896, 0.62));
+  const key = new THREE.DirectionalLight(0xffffff, 0.95);
+  key.position.set(7, 12, 6);
+  key.castShadow = true;
+  key.shadow.mapSize.set(2048, 2048);
+  key.shadow.camera.left = -9; key.shadow.camera.right = 9;
+  key.shadow.camera.top = 9; key.shadow.camera.bottom = -9;
+  key.shadow.camera.near = 1; key.shadow.camera.far = 40;
+  key.shadow.bias = -0.0006;
+  key.shadow.normalBias = 0.02;
+  scene.add(key);
+  const fill = new THREE.DirectionalLight(0xcfe0ff, 0.32);
+  fill.position.set(-6, 5, -5);
+  scene.add(fill);
+
+  /* ------------------------------------------------------------------
+     Materials (hex values are sRGB, converted so they read true on screen)
+     ------------------------------------------------------------------ */
+  const lin = (c) => new THREE.Color(c).convertSRGBToLinear();
+  const std = (c, r, m, extra) => new THREE.MeshStandardMaterial(Object.assign({ color: lin(c), roughness: r, metalness: m }, extra || {}));
+  const glow = (c, e, i) => new THREE.MeshStandardMaterial({ color: lin(c), emissive: lin(e), emissiveIntensity: i, roughness: 0.4, metalness: 0 });
+
+  const M = {
+    white: std('#eef1f4', 0.38, 0.04),
+    trim: std('#aab0b7', 0.55, 0.25),
+    steel: std('#464d55', 0.7, 0.25),
+    dark: std('#22262b', 0.8, 0.2),
+    seam: std('#3a4047', 0.8, 0.1),
+    crimson: std('#b51c2d', 0.42, 0.08),
+    hook: std('#cf1531', 0.4, 0.2),
+    glass: std('#0e1a25', 0.12, 0.55),
+    mirror: std('#5d7a90', 0.1, 0.7),
+    tireCore: std('#1d1e20', 0.95, 0),
+    rubber: std('#151617', 0.95, 0),
+    rim: std('#3c4148', 0.5, 0.6),
+    hub: std('#1b1e22', 0.6, 0.5),
+    nut: std('#8a919a', 0.4, 0.8),
+    alu: std('#c7ccd2', 0.35, 0.7),
+    yellow: std('#d8a30a', 0.5, 0.2),
+    box: std('#8d949c', 0.6, 0.3),
+    fender: std('#2b2f35', 0.8, 0.2, { side: THREE.DoubleSide }),
+    dish: std('#f2f4f6', 0.35, 0.1, { side: THREE.DoubleSide })
+  };
+  const L = {
+    redA: glow('#7a0a14', '#ff1f33', 1),
+    redB: glow('#7a0a14', '#ff1f33', 1),
+    white: glow('#e9edf5', '#fff4da', 0.9),
+    amber: glow('#a05a00', '#ffa31a', 0.9),
+    tail: glow('#6b0810', '#ff2438', 0.8)
+  };
+
+  /* ------------------------------------------------------------------
+     Helpers
+     ------------------------------------------------------------------ */
+  function grp(name, parent) { const g = new THREE.Group(); g.name = name; parent.add(g); return g; }
+  function box(w, h, d, mat, x, y, z, parent, name) {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+    m.position.set(x, y, z);
+    if (name) m.name = name;
+    parent.add(m);
+    return m;
+  }
+  function cyl(r, h, mat, x, y, z, parent, axis, name, seg) {
+    const g = new THREE.CylinderGeometry(r, r, h, seg || 16);
+    if (axis === 'x') g.rotateZ(Math.PI / 2);
+    else if (axis === 'z') g.rotateX(Math.PI / 2);
+    const m = new THREE.Mesh(g, mat);
+    m.position.set(x, y, z);
+    if (name) m.name = name;
+    parent.add(m);
+    return m;
+  }
+  const both = (fn) => { fn(1); fn(-1); };
+
+  // Panel outline on a side wall (plane z = const), facing outward by `sign`
+  function frameX(parent, x0, x1, y0, y1, z, sign) {
+    const t = 0.022, th = 0.014, w = x1 - x0, h = y1 - y0, cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, zz = z + sign * th / 2;
+    box(w, t, th, M.seam, cx, y0, zz, parent);
+    box(w, t, th, M.seam, cx, y1, zz, parent);
+    box(t, h, th, M.seam, x0, cy, zz, parent);
+    box(t, h, th, M.seam, x1, cy, zz, parent);
+  }
+  // Panel outline on the rear wall (plane x = const)
+  function frameZ(parent, z0, z1, y0, y1, x, sign) {
+    const t = 0.022, th = 0.014, w = z1 - z0, h = y1 - y0, cz = (z0 + z1) / 2, cy = (y0 + y1) / 2, xx = x + sign * th / 2;
+    box(th, t, w, M.seam, xx, y0, cz, parent);
+    box(th, t, w, M.seam, xx, y1, cz, parent);
+    box(th, h, t, M.seam, xx, cy, z0, parent);
+    box(th, h, t, M.seam, xx, cy, z1, parent);
+  }
+  // Ladder lying along local X; rotate the group to stand it up
+  function ladder(len, width, mat, parent, name) {
+    const g = grp(name, parent);
+    both((s) => box(len, 0.05, 0.04, mat, 0, 0, s * width / 2, g, 'Rail'));
+    const n = Math.floor(len / 0.3);
+    for (let i = 0; i <= n; i++) cyl(0.017, width, mat, -len / 2 + i * (len / n), 0, 0, g, 'z', 'Rung', 8);
+    return g;
+  }
+
+  /* ------------------------------------------------------------------
+     Truck: Body, Wheels, Lights, Equipment are separate named groups
+     ------------------------------------------------------------------ */
+  const truck = new THREE.Group(); truck.name = 'RescueTruck';
+  const body = grp('Body', truck);
+  const wheels = grp('Wheels', truck);
+  const lights = grp('Lights', truck);
+  const equipment = grp('Equipment', truck);
+
+  const R = 0.92;                   // wheel radius
+  const AXLES = [2.8, -1.2, -3.15]; // front, middle, rear axle X
+  const HALF_TRACK = 1.25;
+
+  /* ---- Chassis ---- */
+  const chassis = grp('Chassis', body);
+  box(8.35, 0.85, 1.8, M.steel, -0.45, 1.475, 0, chassis, 'Skirt');
+  AXLES.forEach((ax, i) => {
+    cyl(0.09, 2.1, M.dark, ax, R, 0, chassis, 'z', 'Axle' + (i + 1));
+    const diff = new THREE.Mesh(new THREE.SphereGeometry(0.26, 16, 12), M.dark);
+    diff.position.set(ax, R, 0); diff.name = 'Differential' + (i + 1);
+    chassis.add(diff);
+  });
+  both((s) => {
+    box(2.0, 0.85, 0.58, M.trim, 0.8, 1.325, s * 1.21, chassis, 'SideLocker');
+    frameX(chassis, -0.1, 1.7, 1.0, 1.65, s * 1.5, s);
+    box(0.16, 0.045, 0.03, M.dark, 0.8, 1.33, s * 1.515, chassis, 'Handle');
+  });
+  const fenders = grp('Fenders', chassis);
+  AXLES.forEach((ax) => both((s) => {
+    const g = new THREE.CylinderGeometry(1.04, 1.04, 0.74, 28, 1, true, Math.PI / 2, Math.PI);
+    g.rotateX(Math.PI / 2);
+    const f = new THREE.Mesh(g, M.fender);
+    f.position.set(ax, R, s * HALF_TRACK);
+    f.name = 'Fender';
+    fenders.add(f);
+  }));
+  // Bumpers and recovery gear
+  box(0.4, 0.32, 3.1, M.trim, 4.7, 1.16, 0, chassis, 'FrontBumper');
+  box(0.1, 0.1, 2.6, M.dark, 4.92, 1.3, 0, chassis, 'BumperPad');
+  both((s) => {
+    const hook = new THREE.Mesh(new THREE.TorusGeometry(0.09, 0.025, 8, 18), M.hook);
+    hook.rotation.y = Math.PI / 2; hook.position.set(4.95, 1.15, s * 0.75); hook.name = 'TowHook';
+    chassis.add(hook);
+  });
+  box(0.35, 0.32, 2.8, M.dark, -4.775, 1.16, 0, chassis, 'RearBumper');
+  box(0.3, 0.25, 0.4, M.steel, -4.98, 1.1, 0, chassis, 'Hitch');
+
+  /* ---- Cab: extruded side profile (nose, raked windshield, flat roof) ---- */
+  const cab = grp('Cab', body);
+  const prof = new THREE.Shape();
+  prof.moveTo(2.0, 1.9); prof.lineTo(3.85, 1.9); prof.lineTo(3.85, 1.15); prof.lineTo(4.5, 1.15);
+  prof.lineTo(4.5, 2.6); prof.lineTo(4.2, 3.55); prof.lineTo(2.0, 3.55); prof.closePath();
+  const cabGeo = new THREE.ExtrudeGeometry(prof, { depth: 3.0, bevelEnabled: false });
+  cabGeo.translate(0, 0, -1.5);
+  const cabShell = new THREE.Mesh(cabGeo, M.white); cabShell.name = 'CabShell'; cab.add(cabShell);
+
+  // Windshield sits on the raked face; its local X is the outward normal
+  const ws = grp('Windshield', cab);
+  ws.position.set(4.35, 3.075, 0);
+  ws.rotation.z = Math.atan2(0.3, 0.95);
+  box(0.03, 0.98, 2.66, M.dark, 0, 0, 0, ws, 'WindshieldFrame');
+  box(0.04, 0.84, 2.5, M.glass, 0.03, 0, 0, ws, 'WindshieldGlass');
+  both((s) => {
+    const w = box(0.015, 0.025, 0.8, M.dark, 0.06, -0.28, s * 0.45, ws, 'Wiper');
+    w.rotation.x = s * 0.18;
+  });
+
+  // Front face
+  box(0.04, 0.42, 1.3, M.dark, 4.51, 1.62, 0, cab, 'Grille');
+  [1.5, 1.58, 1.66, 1.74].forEach((y) => box(0.03, 0.025, 1.2, M.trim, 4.535, y, 0, cab, 'GrilleSlat'));
+  box(0.03, 0.34, 0.1, M.crimson, 4.515, 2.2, 0, cab, 'CrossV');
+  box(0.03, 0.1, 0.34, M.crimson, 4.515, 2.2, 0, cab, 'CrossH');
+  both((s) => {
+    box(0.04, 0.26, 0.46, M.dark, 4.512, 1.62, s * 1.0, cab, 'HeadlightHousing');
+    // Mirrors
+    [3.18, 2.72].forEach((y) => cyl(0.02, 0.4, M.dark, 4.25, y, s * 1.7, cab, 'z', 'MirrorArm', 8));
+    box(0.12, 0.62, 0.2, M.dark, 4.25, 2.95, s * 1.88, cab, 'MirrorHousing');
+    box(0.01, 0.5, 0.16, M.mirror, 4.185, 2.95, s * 1.88, cab, 'MirrorGlass');
+    // Grab rails on the nose corners
+    cyl(0.025, 1.5, M.alu, 4.6, 2.45, s * 1.42, cab, 'y', 'GrabRail', 8);
+    cyl(0.02, 0.27, M.alu, 4.463, 3.15, s * 1.42, cab, 'x', 'RailStandoff', 8);
+    cyl(0.02, 0.1, M.alu, 4.55, 1.85, s * 1.42, cab, 'x', 'RailStandoff', 8);
+    cyl(0.02, 0.1, M.alu, 4.55, 2.5, s * 1.42, cab, 'x', 'RailStandoff', 8);
+    // Doors and windows
+    frameX(cab, 2.85, 4.15, 1.98, 3.5, s * 1.5, s);
+    box(1.03, 0.63, 0.02, M.dark, 3.52, 3.12, s * 1.502, cab, 'DoorWindowFrame');
+    box(0.95, 0.55, 0.03, M.glass, 3.52, 3.12, s * 1.505, cab, 'DoorWindow');
+    box(0.6, 0.55, 0.03, M.glass, 2.48, 3.12, s * 1.505, cab, 'RearCabWindow');
+    box(0.16, 0.045, 0.03, M.dark, 3.05, 2.3, s * 1.515, cab, 'DoorHandle');
+  });
+  // Cab roof light bar base
+  box(0.34, 0.07, 2.1, M.dark, 3.95, 3.585, 0, cab, 'LightBarBase');
+
+  /* ---- Cargo body ---- */
+  const cargo = grp('CargoBody', body);
+  box(6.6, 1.75, 3.0, M.white, -1.3, 2.775, 0, cargo, 'CargoShell');
+  const doorEdges = [-4.5, -3.0, -1.5, 0.0, 1.5];
+  both((s) => {
+    for (let i = 0; i < 4; i++) {
+      const x0 = doorEdges[i], x1 = doorEdges[i + 1];
+      frameX(cargo, x0 + 0.03, x1 - 0.03, 1.98, 3.25, s * 1.5, s);
+      box(0.16, 0.045, 0.03, M.dark, (x0 + x1) / 2, 2.2, s * 1.515, cargo, 'Handle');
+    }
+    box(0.36, 0.34, 0.014, M.dark, 1.78, 3.0, s * 1.507, cargo, 'LouvreBack');
+    for (let i = 0; i < 5; i++) box(0.32, 0.02, 0.02, M.trim, 1.78, 2.86 + i * 0.07, s * 1.514, cargo, 'LouvreSlat');
+    box(0.04, 1.75, 0.03, M.seam, 2.0, 2.775, s * 1.5, cargo, 'CabSeam');
+    // Crimson stripes: one along the full length, one high on the cargo body
+    box(9.05, 0.3, 0.02, M.crimson, -0.075, 2.6, s * 1.51, cargo, 'StripeMid');
+    box(6.6, 0.25, 0.02, M.crimson, -1.3, 3.425, s * 1.51, cargo, 'StripeTop');
+  });
+  // Rear wall
+  box(0.02, 0.3, 3.0, M.crimson, -4.61, 2.6, 0, cargo, 'StripeRearMid');
+  box(0.02, 0.25, 3.0, M.crimson, -4.61, 3.425, 0, cargo, 'StripeRearTop');
+  [[-1.45, -0.5], [-0.45, 0.45], [0.5, 1.45]].forEach((z) => frameZ(cargo, z[0], z[1], 2.2, 3.25, -4.6, -1));
+  box(0.02, 0.14, 0.3, M.trim, -4.64, 1.6, 0, cargo, 'LicensePlate');
+  const rearLadder = ladder(2.1, 0.44, M.alu, cargo, 'RearLadder');
+  rearLadder.rotation.z = Math.PI / 2;
+  rearLadder.position.set(-4.67, 2.55, -1.15);
+
+  /* ---- Equipment: roof rack, ladders, monitor, satellite dish ---- */
+  const rack = grp('RoofRack', equipment);
+  const rx0 = -4.35, rx1 = 1.8;
+  both((s) => {
+    box(rx1 - rx0, 0.04, 0.04, M.alu, (rx0 + rx1) / 2, 3.95, s * 1.35, rack, 'RailTop');
+    box(rx1 - rx0, 0.03, 0.03, M.alu, (rx0 + rx1) / 2, 3.8, s * 1.35, rack, 'RailMid');
+    for (let x = rx0; x <= rx1 + 0.01; x += 1.025) cyl(0.02, 0.3, M.alu, x, 3.8, s * 1.35, rack, 'y', 'Post', 8);
+  });
+  box(0.04, 0.04, 2.7, M.alu, rx1, 3.95, 0, rack, 'RailFront');
+  box(0.04, 0.04, 2.7, M.alu, rx0, 3.95, 0, rack, 'RailRear');
+
+  const roofLadderR = ladder(3.2, 0.5, M.alu, equipment, 'RoofLadderRight');
+  roofLadderR.position.set(-2.7, 3.685, 0.85);
+  const roofLadderL = ladder(3.2, 0.5, M.yellow, equipment, 'RoofLadderLeft');
+  roofLadderL.position.set(-2.7, 3.685, -0.85);
+  box(1.2, 0.34, 1.0, M.box, 1.0, 3.82, 0, equipment, 'RoofCase');
+  box(0.9, 0.04, 0.7, M.dark, 1.0, 4.01, 0, equipment, 'RoofCaseLid');
+
+  const monitor = grp('DeckMonitor', equipment);
+  monitor.position.set(-0.6, 3.65, 0);
+  cyl(0.22, 0.25, M.crimson, 0, 0.125, 0, monitor, 'y', 'Base', 20);
+  cyl(0.1, 0.45, M.crimson, 0, 0.45, 0, monitor, 'y', 'Riser', 12);
+  const barrel = grp('Barrel', monitor);
+  barrel.position.set(0, 0.7, 0);
+  barrel.rotation.z = 0.35;
+  cyl(0.08, 1.0, M.crimson, 0.45, 0, 0, barrel, 'x', 'BarrelTube', 12);
+  cyl(0.11, 0.16, M.dark, 1.0, 0, 0, barrel, 'x', 'Nozzle', 12);
+
+  const dishPivot = grp('SatDish', equipment);
+  dishPivot.position.set(2.75, 3.55, 0);
+  cyl(0.05, 0.25, M.trim, 0, 0.125, 0, dishPivot, 'y', 'Stalk', 10);
+  const dishTilt = grp('DishTilt', dishPivot);
+  dishTilt.position.set(0, 0.28, 0);
+  dishTilt.rotation.z = -0.65;
+  const bowl = new THREE.SphereGeometry(0.5, 28, 10, 0, Math.PI * 2, Math.PI - 0.95, 0.95);
+  bowl.translate(0, 0.5, 0);
+  const dishMesh = new THREE.Mesh(bowl, M.dish); dishMesh.name = 'Dish'; dishTilt.add(dishMesh);
+  cyl(0.015, 0.4, M.trim, 0, 0.2, 0, dishTilt, 'y', 'FeedArm', 8);
+  box(0.07, 0.05, 0.07, M.dark, 0, 0.42, 0, dishTilt, 'FeedHorn');
+
+  /* ---- Lights ---- */
+  // Cab roof light bar: red ends flash alternately, white centre stays lit
+  box(0.3, 0.12, 0.5, L.white, 3.95, 3.68, 0, lights, 'LightBarCentre');
+  box(0.3, 0.12, 0.7, L.redA, 3.95, 3.68, 0.78, lights, 'LightBarRight');
+  box(0.3, 0.12, 0.7, L.redB, 3.95, 3.68, -0.78, lights, 'LightBarLeft');
+  // Rack beacons
+  both((s) => {
+    cyl(0.07, 0.1, s > 0 ? L.redA : L.redB, -4.35, 4.03, s * 1.35, lights, 'y', 'Beacon', 12);
+    cyl(0.07, 0.1, s > 0 ? L.redB : L.redA, 1.8, 4.03, s * 1.35, lights, 'y', 'Beacon', 12);
+  });
+  both((s) => {
+    box(0.03, 0.2, 0.4, L.white, 4.53, 1.62, s * 1.0, lights, 'Headlight');
+    box(0.03, 0.1, 0.18, L.amber, 4.53, 1.62, s * 1.33, lights, 'Indicator');
+    box(0.04, 0.1, 0.14, L.amber, 4.93, 1.16, s * 1.25, lights, 'FogLight');
+    // Rear cluster
+    cyl(0.075, 0.05, L.tail, -4.62, 2.05, s * 1.32, lights, 'x', 'TailLight', 14);
+    cyl(0.075, 0.05, L.amber, -4.62, 2.05, s * 1.14, lights, 'x', 'RearIndicator', 14);
+    cyl(0.075, 0.05, L.tail, -4.62, 2.05, s * 0.96, lights, 'x', 'ReverseBrake', 14);
+    box(0.06, 0.24, 0.34, L.tail, -4.62, 3.45, s * 1.15, lights, 'RearClearance');
+  });
+
+  /* ---- Wheels: 6 tyres with staggered lug blocks, steel rims, hub caps, wheel nuts ---- */
+  const WHEEL_SPEED = 0.9; // rad/s, subtle
+  const spinners = [];
+  const coreGeo = new THREE.CylinderGeometry(0.78, 0.78, 0.64, 36); coreGeo.rotateX(Math.PI / 2);
+  const lugGeo = new THREE.BoxGeometry(0.14, 0.2, 0.3);
+  const rimGeo = new THREE.CylinderGeometry(0.46, 0.46, 0.7, 28); rimGeo.rotateX(Math.PI / 2);
+  const recessGeo = new THREE.CylinderGeometry(0.33, 0.33, 0.03, 24); recessGeo.rotateX(Math.PI / 2);
+  const capGeo = new THREE.CylinderGeometry(0.17, 0.17, 0.08, 20); capGeo.rotateX(Math.PI / 2);
+  const ringGeo = new THREE.TorusGeometry(0.46, 0.03, 8, 28);
+  const nutGeo = new THREE.CylinderGeometry(0.03, 0.03, 0.06, 6); nutGeo.rotateX(Math.PI / 2);
+
+  const LUGS = 24;
+  const lugMats = [];
+  const dummy = new THREE.Object3D();
+  [[-0.16, 0], [0.16, Math.PI / LUGS]].forEach((row) => {
+    const arr = [];
+    for (let i = 0; i < LUGS; i++) {
+      const a = (i / LUGS) * Math.PI * 2 + row[1];
+      dummy.position.set(Math.cos(a) * 0.85, Math.sin(a) * 0.85, row[0]);
+      dummy.rotation.set(0, 0, a);
+      dummy.updateMatrix();
+      arr.push(dummy.matrix.clone());
+    }
+    lugMats.push(arr);
+  });
+  const nutMats = [];
+  [1, -1].forEach((f) => {
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      dummy.position.set(Math.cos(a) * 0.25, Math.sin(a) * 0.25, f * 0.38);
+      dummy.rotation.set(0, 0, 0);
+      dummy.updateMatrix();
+      nutMats.push(dummy.matrix.clone());
+    }
+  });
+
+  function makeWheel(name, x, s) {
+    const g = new THREE.Group(); g.name = name;
+    g.position.set(x, R, s * HALF_TRACK);
+    const spin = new THREE.Group(); spin.name = 'Spin'; g.add(spin);
+    const core = new THREE.Mesh(coreGeo, M.tireCore); core.name = 'Tire'; spin.add(core);
+    lugMats.forEach((arr, r) => {
+      const im = new THREE.InstancedMesh(lugGeo, M.rubber, LUGS);
+      im.name = 'Tread' + (r + 1);
+      arr.forEach((m, i) => im.setMatrixAt(i, m));
+      im.frustumCulled = false;
+      spin.add(im);
+    });
+    const rim = new THREE.Mesh(rimGeo, M.rim); rim.name = 'Rim'; spin.add(rim);
+    [1, -1].forEach((f) => {
+      const rec = new THREE.Mesh(recessGeo, M.hub); rec.position.z = f * 0.35; rec.name = 'RimRecess'; spin.add(rec);
+      const cap = new THREE.Mesh(capGeo, M.hub); cap.position.z = f * 0.37; cap.name = 'HubCap'; spin.add(cap);
+      const ring = new THREE.Mesh(ringGeo, M.nut); ring.position.z = f * 0.35; ring.name = 'RimRing'; spin.add(ring);
+    });
+    const nuts = new THREE.InstancedMesh(nutGeo, M.nut, nutMats.length);
+    nuts.name = 'WheelNuts';
+    nutMats.forEach((m, i) => nuts.setMatrixAt(i, m));
+    nuts.frustumCulled = false;
+    spin.add(nuts);
+    wheels.add(g);
+    spinners.push(spin);
+    return g;
+  }
+  const axleNames = ['Front', 'Mid', 'Rear'];
+  AXLES.forEach((ax, i) => both((s) => makeWheel('Wheel_' + axleNames[i] + (s > 0 ? 'Right' : 'Left'), ax, s)));
+
+  truck.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  scene.add(truck);
+
+  /* ------------------------------------------------------------------
+     Stage: platform disc, shadow-catching ground plane, 360° bearing ring
+     ------------------------------------------------------------------ */
+  const groundMat = new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false });
+  const disc = new THREE.Mesh(new THREE.CircleGeometry(6.2, 96), groundMat);
+  disc.rotation.x = -Math.PI / 2; disc.name = 'StageDisc';
+  scene.add(disc);
+
+  const shadowMat = new THREE.ShadowMaterial({ opacity: 0.3 });
+  const shadowPlane = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), shadowMat);
+  shadowPlane.rotation.x = -Math.PI / 2; shadowPlane.position.y = 0.004;
+  shadowPlane.receiveShadow = true; shadowPlane.name = 'GroundShadowPlane';
+  scene.add(shadowPlane);
+
+  const tickMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5, toneMapped: false });
+  const TICKS = 72;
+  const ticks = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 0.01, 1), tickMat, TICKS);
+  ticks.name = 'BearingTicks'; ticks.frustumCulled = false;
+  for (let i = 0; i < TICKS; i++) {
+    const b = rad(i * 5);
+    const major = i % 9 === 0, mid = i % 3 === 0;
+    const len = i === 0 ? 0 : major ? 0.42 : mid ? 0.26 : 0.14;
+    const wid = major ? 0.05 : mid ? 0.035 : 0.025;
+    dummy.position.set(Math.cos(b) * 5.75, 0.008, Math.sin(b) * 5.75);
+    dummy.rotation.set(0, -b, 0);
+    dummy.scale.set(len, 1, wid);
+    dummy.updateMatrix();
+    ticks.setMatrixAt(i, dummy.matrix);
+  }
+  dummy.scale.set(1, 1, 1);
+  scene.add(ticks);
+  const frontTickMat = new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false });
+  const frontTick = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.01, 0.1), frontTickMat);
+  frontTick.position.set(5.75, 0.009, 0); frontTick.name = 'FrontMarker';
+  scene.add(frontTick);
+
+  function applyTheme() {
+    groundMat.color.set(tok('--ground')).convertSRGBToLinear();
+    tickMat.color.set(tok('--ink')).convertSRGBToLinear();
+    frontTickMat.color.set(tok('--accent')).convertSRGBToLinear();
+    const c = new THREE.Color(tok('--bg'));
+    const dark = (c.r * 0.299 + c.g * 0.587 + c.b * 0.114) < 0.5;
+    shadowMat.opacity = dark ? 0.6 : 0.3;
+    tickMat.opacity = dark ? 0.4 : 0.5;
+  }
+  applyTheme();
+  if (window.matchMedia) {
+    const mq = matchMedia('(prefers-color-scheme: dark)');
+    if (mq.addEventListener) mq.addEventListener('change', applyTheme);
+  }
+  new MutationObserver(applyTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+  /* ------------------------------------------------------------------
+     Views: each preset matches one panel of the turnaround sheet
+     ------------------------------------------------------------------ */
+  const VIEWS = {
+    iso:   { theta: rad(45),  phi: rad(54.7356), need: { w: 5.2, h: 4.6 } },
+    front: { theta: rad(90),  phi: rad(88),      need: { w: 2.5, h: 3.0 } },
+    side:  { theta: 0,        phi: rad(88),      need: { w: 5.4, h: 3.0 } },
+    rear:  { theta: rad(-90), phi: rad(88),      need: { w: 2.5, h: 3.0 } },
+    top:   { theta: rad(-90), phi: rad(0.5),     need: { w: 2.3, h: 5.4 } }
+  };
+  let aspect = 1, lastFit = 1, currentNeed = VIEWS.iso.need, tween = null, resumeTimer = null;
+  const fit = (n) => Math.max(controls.minZoom, Math.min(controls.maxZoom, Math.min(HALF * aspect / n.w, HALF / n.h)));
+
+  function resize() {
+    const w = stage.clientWidth || 1, h = stage.clientHeight || 1;
+    renderer.setSize(w, h, false);
+    aspect = w / h;
+    camera.left = -HALF * aspect; camera.right = HALF * aspect; camera.top = HALF; camera.bottom = -HALF;
+    const nf = fit(currentNeed);
+    if (Math.abs(camera.zoom - lastFit) < 1e-3) camera.zoom = nf;
+    lastFit = nf;
+    camera.updateProjectionMatrix();
+  }
+  if (window.ResizeObserver) new ResizeObserver(resize).observe(stage); else window.addEventListener('resize', resize);
+  resize();
+
+  placeCamera(VIEWS.iso.theta, VIEWS.iso.phi);
+  camera.zoom = fit(VIEWS.iso.need); lastFit = camera.zoom;
+  camera.updateProjectionMatrix();
+  controls.update();
+
+  const ui = {
+    views: Array.prototype.slice.call(document.querySelectorAll('[data-view]')),
+    toggles: Array.prototype.slice.call(document.querySelectorAll('[data-toggle]')),
+    bearing: document.getElementById('bearing'),
+    elev: document.getElementById('elev')
+  };
+  function syncUI() {
+    ui.views.forEach((b) => b.setAttribute('aria-pressed', String(state.view === b.dataset.view)));
+    ui.toggles.forEach((b) => b.setAttribute('aria-pressed', String(!!state[b.dataset.toggle])));
+  }
+
+  function goView(name) {
+    const v = VIEWS[name];
+    const th0 = controls.getAzimuthalAngle(), ph0 = controls.getPolarAngle();
+    let dth = ((v.theta - th0 + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI;
+    currentNeed = v.need;
+    const z1 = fit(v.need);
+    tween = { t0: performance.now(), dur: 800, th0: th0, dth: dth, ph0: ph0, dph: v.phi - ph0, z0: camera.zoom, z1: z1 };
+    state.view = name; state.spin = false; controls.autoRotate = false;
+    clearTimeout(resumeTimer);
+    syncUI();
+  }
+
+  ui.views.forEach((b) => b.addEventListener('click', () => goView(b.dataset.view)));
+  ui.toggles.forEach((b) => b.addEventListener('click', () => {
+    const k = b.dataset.toggle;
+    state[k] = !state[k];
+    if (k === 'spin') { controls.autoRotate = state.spin; if (state.spin) { state.view = null; tween = null; } }
+    syncUI();
+  }));
+
+  controls.addEventListener('start', () => {
+    tween = null; controls.autoRotate = false; clearTimeout(resumeTimer);
+    if (state.view) { state.view = null; syncUI(); }
+  });
+  controls.addEventListener('end', () => {
+    if (!state.spin) return;
+    clearTimeout(resumeTimer);
+    resumeTimer = setTimeout(() => { if (state.spin) controls.autoRotate = true; }, 2500);
+  });
+  syncUI();
+
+  /* ------------------------------------------------------------------
+     Animation loop
+     ------------------------------------------------------------------ */
+  const clock = new THREE.Clock();
+  let t = 0, lastB = '', lastE = '';
+  const pad3 = (n) => ('00' + n).slice(-3);
+
+  function frame() {
+    requestAnimationFrame(frame);
+    const dt = Math.min(clock.getDelta(), 0.05);
+    t += dt;
+
+    if (state.wheels) for (let i = 0; i < spinners.length; i++) spinners[i].rotation.z -= dt * WHEEL_SPEED;
+    if (!reduceMotion) dishPivot.rotation.y = Math.sin(t * 0.35) * 0.7;
+
+    if (state.strobes) {
+      const on = Math.sin(t * Math.PI * 2 * 1.6) > 0;
+      L.redA.emissiveIntensity = on ? 1.9 : 0.15;
+      L.redB.emissiveIntensity = on ? 0.15 : 1.9;
+    } else {
+      L.redA.emissiveIntensity = L.redB.emissiveIntensity = 0.6;
+    }
+
+    if (tween) {
+      const k = Math.min(1, (performance.now() - tween.t0) / tween.dur);
+      const e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+      placeCamera(tween.th0 + tween.dth * e, tween.ph0 + tween.dph * e);
+      camera.zoom = tween.z0 + (tween.z1 - tween.z0) * e;
+      camera.updateProjectionMatrix();
+      if (k >= 1) { lastFit = tween.z1; tween = null; }
+    }
+
+    controls.update();
+
+    const thDeg = controls.getAzimuthalAngle() * 180 / Math.PI;
+    const bearing = Math.round(((90 - thDeg) % 360 + 360) % 360) % 360;
+    const elev = Math.round(90 - controls.getPolarAngle() * 180 / Math.PI);
+    const bs = pad3(bearing) + '°', es = elev + '°';
+    if (bs !== lastB) { ui.bearing.textContent = bs; lastB = bs; }
+    if (es !== lastE) { ui.elev.textContent = es; lastE = es; }
+
+    renderer.render(scene, camera);
+  }
+  frame();
+
+  // Handy in the console: inspect or tweak the named groups
+  window.rescueTruck = { THREE: THREE, scene: scene, truck: truck, camera: camera, controls: controls, groups: { body: body, wheels: wheels, lights: lights, equipment: equipment } };
+})();
+</script>
