@@ -1,6 +1,6 @@
-# ISO-MECH — EX–240 Excavator Studio
+# ISO-MECH — Pile Drill & Excavator Studio
 
-**A browser-based 3D excavator studio where you can operate an EX–240, drive a procedural construction site, and inspect the machine in an exploded view.**
+**A browser-based 3D machinery studio where you can operate a PR–180 piling rig or EX–240 excavator, drive a procedural construction site, and inspect the excavator in an exploded view.**
 
 [**Open the GitHub Pages demo →**](https://yugaldoddamani.github.io/ISO-MECH/)
 
@@ -13,6 +13,8 @@
 </p>
 
 ## What you can explore
+
+- **Switch machines:** start with the PR–180 piling rig and switch to the EX–240 excavator. Adjust mast rake, rotary head feed, Kelly extension, and body slew; toggle auger rotation. The tool is ground-guarded; borehole drilling is not simulated. Assembly inspection is excavator-only.
 
 - **Operate the arm:** control the boom, stick, bucket, and upper-body slew with touch controls or the keyboard; play or pause a short motion demo.
 - **Drive the undercarriage:** accelerate, brake, and steer the two tracks independently. Track shoes, rollers, and ground impressions respond to signed travel distance.
@@ -41,11 +43,12 @@ Open [http://localhost:8000](http://localhost:8000) in a WebGL-capable browser. 
 
 ## Build and project layout
 
-Run `python3 scripts/assemble.py` after editing source files. It combines `page-shell.html`, `excavator-app.js`, `three.min.js`, and `OrbitControls.js` into the standalone `index.html` and `excavator.html` deliverables.
+Run `python3 scripts/assemble.py` after editing source files. It combines `page-shell.html`, `pile-drill.js`, `excavator-app.js`, `three.min.js`, and `OrbitControls.js` into the standalone `index.html` and `excavator.html` deliverables.
 
 - `index.html` — GitHub Pages entry point.
 - `excavator.html` — standalone build, also suitable for embedding.
 - `page-shell.html`, `excavator-app.js` — editable UI and application source.
+- `pile-drill.js` — procedural piling rig model and articulation.
 - `scripts/migrations/` — historical development helpers; not part of the normal build.
 - `tests/` — Playwright browser checks. See [`tests/README.md`](tests/README.md) for setup and run instructions.
 - [`docs/embedding.md`](docs/embedding.md) — iframe example, controls, and simulation scope.
