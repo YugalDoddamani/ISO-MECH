@@ -67,14 +67,16 @@ window.createYardPhysics = function createYardPhysics(CANNON) {
     world.addBody(body); machineBodies.set(id, { body, previous: null });
     return body;
   }
-  function syncFleet(records, activeId, activePosition, activeHeading, dt) {
+  // The active machine (pose passed in) and any ids in `moving` (pose read from their records) are
+  // kinematic bodies that push props with their velocity; the rest are static.
+  function syncFleet(records, activeId, activePosition, activeHeading, dt, moving = null) {
     for (const [id, record] of Object.entries(records)) {
       const entry = machineBodies.get(id); if (!entry) continue;
-      const active = id === activeId, body = entry.body;
-      const x = active ? activePosition.x : record.position.x;
-      const y = active ? activePosition.y : record.position.y;
-      const z = active ? activePosition.z : record.position.z;
-      const heading = active ? activeHeading : record.heading;
+      const driven = id === activeId, active = driven || (moving !== null && moving.has(id)), body = entry.body;
+      const x = driven ? activePosition.x : record.position.x;
+      const y = driven ? activePosition.y : record.position.y;
+      const z = driven ? activePosition.z : record.position.z;
+      const heading = driven ? activeHeading : record.heading;
       const p = new CANNON.Vec3(x, y, z), q = new CANNON.Quaternion(); q.setFromEuler(0, heading, 0);
       if (active) {
         if (body.type !== CANNON.Body.KINEMATIC) {

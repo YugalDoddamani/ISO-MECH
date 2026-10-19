@@ -106,8 +106,10 @@ function updateFrustum() {
       (window.innerWidth <= 760 ? 4.9 : 6.7) / aspect
     ),
     expanded = Math.max(window.innerWidth <= 760 ? 5.5 : 6.2, 8.2 / aspect);
-  const close =
-      activeVehicle === 'drill'
+  // Work mode frames the followed machine together with its working area.
+  const close = workMode.active
+      ? Math.max(workMode.follow === 'drill' ? 11.5 : 10, 9 / aspect)
+      : activeVehicle === 'drill'
         ? Math.max(10.5, 7.2 / aspect)
         : normal + (expanded - normal) * assembly.value,
     siteHalf = Math.max(58, 62 / aspect);

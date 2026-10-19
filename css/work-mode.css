@@ -1,0 +1,288 @@
+/* IsoMech V2 · Work mode: the mode buttons, the crew panel, the phone crew pad and the dumper payload. */
+#modeButtons {
+  position: absolute;
+  top: 61px;
+  left: 34px;
+  z-index: 8;
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+#modeButtons #vehicleSwitch {
+  position: static;
+}
+#workModeToggle {
+  background: #f2c94c;
+  color: #1d2620;
+  border: 1px solid #c99d22;
+  border-radius: 5px;
+  padding: 10px 12px;
+  font: 10px monospace;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+}
+#workModeToggle:hover {
+  background: #ffd866;
+}
+#workModeToggle[aria-pressed="true"] {
+  background: #26382f;
+  color: #f2c94c;
+  border-color: #f2c94c;
+  box-shadow: 0 0 0 3px #f2c94c33;
+}
+.work-mode #vehicleSwitch,
+.work-mode #speedHUD {
+  display: none !important;
+}
+
+/* The console shows the crew instead of machine controls. */
+#workPanel,
+#workPad {
+  display: none;
+}
+.work-mode #workPanel {
+  display: block;
+}
+.work-mode .console-tabs,
+.work-mode .modebar,
+.work-mode #coachmark,
+.work-mode #joints,
+.work-mode #drivePanel,
+.work-mode #assemblyPanel,
+.work-mode #rigPanel,
+.work-mode #dozerPanel,
+.work-mode #dumperPanel,
+.work-mode .keyboard-legend,
+.work-mode .hint-block,
+.work-mode #reset,
+.work-mode #resetYard {
+  display: none !important;
+}
+.work-summary {
+  display: grid;
+  grid-template-columns: 0.75fr 1.35fr 0.85fr 1.3fr 0.85fr;
+  gap: 6px;
+  padding: 4px 0 16px;
+  border-bottom: 1px solid var(--border);
+}
+.work-summary label {
+  display: block;
+  font: 8px monospace;
+  letter-spacing: 1.2px;
+  color: #91a285;
+  margin-bottom: 6px;
+}
+.work-summary > div {
+  min-width: 0;
+  white-space: nowrap;
+}
+.work-summary strong {
+  font: 16px monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.5px;
+}
+.work-summary small {
+  font: 9px monospace;
+  color: #a1b28e;
+}
+.work-crew {
+  display: grid;
+  gap: 6px;
+  padding: 14px 0;
+}
+.work-machine {
+  display: grid;
+  grid-template-columns: 10px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  background: #1a221d;
+  border: 1px solid #2f3a33;
+  border-radius: 4px;
+  color: var(--text);
+  padding: 10px 11px;
+  cursor: pointer;
+}
+.work-machine:hover {
+  border-color: #56665a;
+}
+.work-machine i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--machine);
+  box-shadow: 0 0 0 3px #ffffff10;
+}
+.work-machine span {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.work-machine b {
+  font: 700 10px monospace;
+  letter-spacing: 1px;
+}
+.work-machine em {
+  font:
+    normal 10px/1.35 system-ui,
+    sans-serif;
+  color: #b9c5b0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.work-machine small {
+  font: 8px monospace;
+  letter-spacing: 1px;
+  color: #8e9b86;
+  border: 1px solid #3a463d;
+  border-radius: 3px;
+  padding: 3px 5px;
+}
+.work-machine[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: #222c25;
+}
+.work-machine[aria-pressed="true"] small {
+  color: #1d2620;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.work-overview {
+  width: 100%;
+  background: none;
+  border: 1px solid #5d6a52;
+  color: #d4dec7;
+  border-radius: 3px;
+  font: 10px monospace;
+  letter-spacing: 1px;
+  padding: 10px;
+  cursor: pointer;
+}
+.work-overview[aria-pressed="true"] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.work-note {
+  font:
+    10px/1.6 system-ui,
+    sans-serif;
+  color: #9fae96;
+  margin: 14px 0 16px;
+}
+
+/* Dumper payload read-out (operator console). */
+.dumper-load {
+  display: grid;
+  gap: 8px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+  font: 11px monospace;
+}
+.dumper-load > span {
+  display: flex;
+  justify-content: space-between;
+}
+.dumper-load output {
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.dumper-load i {
+  display: block;
+  height: 6px;
+  border-radius: 3px;
+  background: #2a332d;
+  overflow: hidden;
+}
+.dumper-load i b {
+  display: block;
+  height: 100%;
+  width: 25%;
+  background: linear-gradient(90deg, #b8a272, #d9b85c);
+  transition: width 0.25s;
+}
+.dumper-load small {
+  font:
+    9px/1.6 system-ui,
+    sans-serif;
+  color: #93a08b;
+}
+
+@media (max-width: 1050px) and (min-width: 761px) {
+  #modeButtons {
+    left: 24px;
+  }
+}
+@media (max-width: 760px) {
+  #modeButtons {
+    top: calc(50px + env(safe-area-inset-top));
+    left: 12px;
+    gap: 6px;
+  }
+  #workModeToggle {
+    font-size: 9px;
+    padding: 10px;
+  }
+  .explore-mode #modeButtons #vehicleSwitch {
+    max-width: calc(100vw - 205px);
+  }
+  .work-mode .masthead:after {
+    display: none;
+  }
+  /* Phones: the crew list replaces the joystick, sliders and travel pad. */
+  .work-mode #mobileGamepad {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto;
+    align-content: start;
+  }
+  .work-mode #mobileGamepad #moreControls {
+    position: static;
+    justify-self: end;
+  }
+  .work-mode #mobileGamepad .mobile-drive,
+  .work-mode #mobileGamepad .joystick,
+  .work-mode #mobileGamepad .mobile-sliders,
+  .work-mode #mobileGamepad #mobileRigSpin {
+    display: none !important;
+  }
+  .work-mode #workPad {
+    display: grid;
+    gap: 8px;
+    align-content: start;
+    min-height: 0;
+  }
+  #workPad .work-crew {
+    grid-template-columns: 1fr 1fr;
+    padding: 0;
+  }
+  #workPad .work-machine {
+    padding: 8px;
+    gap: 7px;
+  }
+  #workPad .work-machine small {
+    display: none;
+  }
+  .work-pad-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .work-pad-actions button {
+    min-height: 40px;
+    background: none;
+    border: 1px solid #5d6a52;
+    color: #d4dec7;
+    border-radius: 4px;
+    font: 10px monospace;
+    letter-spacing: 1px;
+  }
+  .work-pad-actions [data-work-stop] {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .work-summary strong {
+    font-size: 15px;
+  }
+}

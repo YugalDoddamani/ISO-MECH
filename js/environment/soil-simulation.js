@@ -78,8 +78,10 @@ window.createSoilSimulation = function createSoilSimulation(options = {}) {
       for (let row = minRow; row <= maxRow; row++) for (let col = minCol; col <= maxCol; col++) {
         const point = cellCenter(col, row), d = Math.hypot(point.x - x, point.z - z);
         if (d >= radius) continue;
+        // Each cell keeps the lowest cutting height and the strongest weight seen along the sweep.
         const weight = (1 - (d / radius) ** 2) ** 2, i = indexOf(col, row), existing = touched.get(i);
-        if (!existing || y < existing.y) touched.set(i, { y, weight: Math.max(weight, existing?.weight || 0) });
+        if (!existing) touched.set(i, { y, weight });
+        else { if (y < existing.y) existing.y = y; if (weight > existing.weight) existing.weight = weight; }
       }
     }
     let requested = 0;
@@ -138,6 +140,62 @@ window.createSoilSimulation = function createSoilSimulation(options = {}) {
     const placed = deposit(x, z, amount, radius);
     bucketPayload = Math.max(0, bucketPayload - placed);
     return placed;
+  }
+  // Take material out of the bucket without placing it on the ground (for example into a dump body).
+  function unloadBucket(volume = bucketPayload) {
+    const amount = Math.min(bucketPayload, Math.max(0, Number(volume) || 0));
+    bucketPayload -= amount;
+    if (bucketPayload < 1e-12) bucketPayload = 0;
+    return amount;
+  }
+  // Loose volume standing above `floor` within a radius: what a bucket or blade could still move there.
+  function volumeAbove(x, z, radius = 1, floor = 0) {
+    const minCol = Math.max(0, Math.floor((x - radius - originX) / cellSize));
+    const maxCol = Math.min(columns - 1, Math.ceil((x + radius - originX) / cellSize));
+    const minRow = Math.max(0, Math.floor((z - radius - originZ) / cellSize));
+    const maxRow = Math.min(rows - 1, Math.ceil((z + radius - originZ) / cellSize));
+    let sum = 0;
+    for (let row = minRow; row <= maxRow; row++) for (let col = minCol; col <= maxCol; col++) {
+      const point = cellCenter(col, row);
+      if (Math.hypot(point.x - x, point.z - z) <= radius) sum += Math.max(0, heights[indexOf(col, row)] - floor) * cellArea;
+    }
+    return sum;
+  }
+  // A blade cutting edge from (x0, z0, y0) to (x1, z1, y1) pushes along the horizontal direction
+  // (dirX, dirZ). Material above the edge in a thin strip around it is carried `reach` metres ahead,
+  // cell to cell, so a berm builds in front of the blade, low cells it passes over are filled to the
+  // edge height, and volume is conserved exactly. Native ground (below `floor`) is never cut.
+  function bladePush(x0, z0, y0, x1, z1, y1, dirX, dirZ, options = {}) {
+    const length = Math.hypot(dirX, dirZ); if (length < 1e-9) return 0;
+    const ux = dirX / length, uz = dirZ / length, floor = Number.isFinite(options.floor) ? options.floor : 0;
+    const band = options.band || cellSize * .5, reach = options.reach || cellSize * 1.5;
+    const ex = x1 - x0, ez = z1 - z0, edge2 = ex * ex + ez * ez, edgeLength = Math.sqrt(edge2);
+    if (edgeLength < 1e-9) return 0;
+    const pad = band + cellSize;
+    const minCol = Math.max(0, Math.floor((Math.min(x0, x1) - pad - originX) / cellSize));
+    const maxCol = Math.min(columns - 1, Math.ceil((Math.max(x0, x1) + pad - originX) / cellSize));
+    const minRow = Math.max(0, Math.floor((Math.min(z0, z1) - pad - originZ) / cellSize));
+    const maxRow = Math.min(rows - 1, Math.ceil((Math.max(z0, z1) + pad - originZ) / cellSize));
+    const moves = [];
+    for (let row = minRow; row <= maxRow; row++) for (let col = minCol; col <= maxCol; col++) {
+      const point = cellCenter(col, row), px = point.x - x0, pz = point.z - z0;
+      const t = (px * ex + pz * ez) / edge2;
+      if (t < 0 || t > 1) continue;
+      if (Math.abs(px * ez - pz * ex) / edgeLength > band) continue;
+      const i = indexOf(col, row), cut = Math.max(floor, y0 + (y1 - y0) * t), excess = heights[i] - cut;
+      if (excess <= 1e-6) continue;
+      const target = locate(point.x + ux * reach, point.z + uz * reach);
+      if (!inside(target.col, target.row)) continue;
+      const j = indexOf(target.col, target.row);
+      if (j !== i) moves.push([i, j, excess]);
+    }
+    let moved = 0;
+    for (const [i, j, amount] of moves) {
+      heights[i] -= amount; heights[j] += amount;
+      softness[i] = Math.max(softness[i], .5); softness[j] = Math.max(softness[j], .84);
+      moved += amount * cellArea;
+    }
+    return moved;
   }
   function withdraw(x, z, volume, radius = 2.5) {
     let remaining = Math.max(0, Number(volume) || 0), removed = 0;
@@ -231,7 +289,7 @@ window.createSoilSimulation = function createSoilSimulation(options = {}) {
   return {
     columns, rows, originX, originZ, cellSize, cellArea, heights, softness,
     heightAt, sample, totalTerrainVolume, totalConservedVolume, scoopSweep, deposit, dumpBucket, withdraw,
-    drillBore, relax, compact, layerAtDepth, reset,
+    unloadBucket, volumeAbove, bladePush, drillBore, relax, compact, layerAtDepth, reset,
     get bucketPayload() { return bucketPayload; }, get payloadCapacity() { return payloadCapacity; },
   };
 };

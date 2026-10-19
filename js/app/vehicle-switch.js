@@ -29,7 +29,11 @@ function updateModeButton() {
   vehicleButton.textContent = '⇄ SWITCH TO ' + labels[next];
   vehicleButton.setAttribute('aria-label', 'Switch to ' + labels[next].toLowerCase());
 }
-function switchVehicle(vehicle, silent = false) {
+function switchVehicle(vehicle, silent = false, leavingWorkMode = false) {
+  if (workMode.active && !leavingWorkMode) {
+    notify('Stop work mode to take a machine');
+    return false;
+  }
   if (vehicle === 'explore') return setExploreMode(true, silent);
   if (!vehicleOrder.includes(vehicle) || assembly.mode) {
     if (assembly.mode) notify('Reassemble before switching vehicles');
@@ -37,7 +41,9 @@ function switchVehicle(vehicle, silent = false) {
   }
   const incoming = vehicleFleet[vehicle],
     previousVehicle = activeVehicle,
-    wasExploring = exploreMode;
+    exploringOnFoot = exploreMode,
+    // Free explore and work mode both leave every machine on its carrier.
+    wasExploring = exploreMode || workMode.active;
   if (vehicle !== previousVehicle || wasExploring) {
     const parked = vehiclePose(vehicle),
       collision = siteCollision(parked.x, parked.z, parked.heading, vehicle);
@@ -88,7 +94,8 @@ function switchVehicle(vehicle, silent = false) {
     activeVehicle = vehicle;
     lastVehicle = vehicle;
     exploreMode = false;
-    document.body.classList.remove('explore-mode');
+    workMode.active = false;
+    document.body.classList.remove('explore-mode', 'work-mode');
     driveRoot.position.copy(incoming.position);
     drive.heading = incoming.heading;
     drive.distance = incoming.distance;
@@ -104,7 +111,7 @@ function switchVehicle(vehicle, silent = false) {
     else pileRig.update(0, 0, 0);
     resetTrailCursors();
   }
-  skipExploreOnNextCycle = wasExploring;
+  skipExploreOnNextCycle = exploringOnFoot;
   pileRig.state.spinning = false;
   pileRig.state.rpm = 0;
   document.body.classList.toggle('drill-mode', vehicle === 'drill');

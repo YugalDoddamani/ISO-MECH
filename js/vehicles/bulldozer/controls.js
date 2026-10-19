@@ -61,7 +61,7 @@ function stepDozerInput(dt) {
   if (joystick.y) dozer.set('lift', dozer.state.lift - joystick.y * dozer.speeds.lift * dt);
 }
 function syncDozerUI() {
-  if (exploreMode || activeVehicle !== 'dozer') return;
+  if (exploreMode || workMode.active || activeVehicle !== 'dozer') return;
   for (const key of Object.keys(dozerLabels)) {
     const value = dozer.state[key],
       formatted = value.toFixed(key === 'lift' ? 2 : 1) + dozerUnits[key];

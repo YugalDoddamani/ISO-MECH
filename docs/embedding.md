@@ -20,7 +20,7 @@ Keep the folder structure together and point an iframe at `index.html`:
 ></iframe>
 ```
 
-The app works inside `sandbox="allow-scripts"`. The frame gets an opaque origin: the CDN libraries still load (jsDelivr sends permissive CORS headers), and the first-use keyboard coach mark simply is not remembered, because storage is unavailable. Click or tap inside the frame before using keyboard shortcuts.
+The app works inside `sandbox="allow-scripts"`. The frame gets an opaque origin: the CDN libraries still load (jsDelivr sends permissive CORS headers), and the first-use keyboard coach mark and the sound on/off choice simply are not remembered, because storage is unavailable. Click or tap inside the frame before using keyboard shortcuts. Sound starts with the first click inside the frame (browsers require a gesture); the visitor can mute it with the SOUND button or M.
 
 Since V2 is split into separate files, it is no longer a single self-contained HTML file: an embed must load it by URL (as above), not by inlining the page with `srcdoc`.
 
@@ -32,6 +32,7 @@ See the [operator guide](operator-ui.md) for the full key map, mobile layout, fl
 - **Machines:** cycle machines and free explore with the switch button. Q/E, W/S, A/D and ←/→ drive the active machine's work functions, ↑/↓ and J/L drive and steer, and Space brakes.
 - **Return to parking bay** resets the selected machine's travel and work pose if its bay is clear. **R** resets only the work pose, and **Reset Yard** restores props, soil and bore marks.
 - **03 / Assembly** separates the EX–240 into 13 systems; **Reassemble & return** (or Esc) exits.
+- **▶ Work mode** runs the whole crew autonomously (dig, load, haul, tip, spread, bore); Esc or **■ Stop work mode** hands control back. It makes a good unattended demo for an embed.
 
 The yard is a procedural 90 × 68 m site with four fleet bays. Machine motion uses lightweight actuator and drive models stepped at a fixed 60 Hz. Soil is a volume-conserving heightfield, and loose props are cannon-es rigid bodies. These are presentation-grade interactions, not engineering analysis, certified hydraulic behaviour, or geotechnical or drilling physics. The cab interior, engine, pumps, valves and harness in the exploded view are illustrative, not service parts or CAD.
 

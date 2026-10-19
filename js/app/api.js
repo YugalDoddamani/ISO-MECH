@@ -17,6 +17,53 @@ window.excavator = {
   },
   switchVehicle,
   setExploreMode,
+  setWorkMode,
+  audio: {
+    get supported() {
+      return siteAudio.supported;
+    },
+    get enabled() {
+      return siteAudio.enabled;
+    },
+    get state() {
+      return siteAudio.ctx ? siteAudio.ctx.state : 'not started';
+    },
+    setEnabled: setSoundEnabled,
+    /** Current voice output levels (camera placement included), for checks. */
+    levels() {
+      return Object.fromEntries(
+        Object.entries(siteAudio.voices).map(([id, voice]) => [
+          id,
+          { rpm: voice.rpm, engine: voice.engine.gain.value, out: voice.out.gain.value },
+        ])
+      );
+    },
+  },
+  get workMode() {
+    const crew = workMode.crew;
+    return {
+      active: workMode.active,
+      shift: workMode.shift,
+      elapsed: workMode.elapsed,
+      follow: workMode.follow,
+      lane: crew ? crew.lane : null,
+      stats: workMode.stats ? { ...workMode.stats } : null,
+      crew: crew
+        ? Object.fromEntries(
+            CREW_ORDER.map(id => [
+              id,
+              {
+                status: crew[id].status,
+                x: crew[id].x,
+                z: crew[id].z,
+                heading: crew[id].heading,
+                speed: crew[id].speed,
+              },
+            ])
+          )
+        : null,
+    };
+  },
   pileRig,
   dozer,
   dumper,
@@ -41,7 +88,7 @@ window.excavator = {
     return true;
   },
   setPose(p) {
-    if (assembly.mode || exploreMode || activeVehicle !== 'excavator') return false;
+    if (assembly.mode || exploreMode || workMode.active || activeVehicle !== 'excavator') return false;
     manual();
     const next = { ...angles };
     for (const k in config) if (k in p) next[k] = clamp(p[k], config[k].min, config[k].max);

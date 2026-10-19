@@ -12,7 +12,7 @@
 function vehiclePose(id) {
   const record = vehicleFleet[id];
   if (!record) return null;
-  if (!exploreMode && id === activeVehicle)
+  if (!exploreMode && !workMode.active && id === activeVehicle)
     return { x: driveRoot.position.x, z: driveRoot.position.z, heading: drive.heading };
   return { x: record.carrier.position.x, z: record.carrier.position.z, heading: record.carrier.rotation.y };
 }
@@ -102,21 +102,31 @@ function clearGroundTracks() {
 }
 function updateGroundTracks() {
   if (assembly.mode || exploreMode) return;
-  dummy.scale.set(activeVehicle === 'dumper' ? 4.5 : 1, 1, 1);
-  const c = Math.cos(drive.heading),
-    s = Math.sin(drive.heading),
-    backOffset = activeVehicle === 'drill' ? 2.4 : activeVehicle === 'dozer' ? 2.85 : 1.5,
-    lateralOffset =
-      activeVehicle === 'drill' ? 1.6 : activeVehicle === 'dozer' || activeVehicle === 'dumper' ? 1.58 : 1.13;
-  for (const t of trackSystemsFor()) {
+  if (workMode.active) {
+    for (const id of vehicleOrder) {
+      const pose = vehiclePose(id);
+      printTracks(id, pose.x, pose.z, pose.heading);
+    }
+    return;
+  }
+  printTracks(activeVehicle, driveRoot.position.x, driveRoot.position.z, drive.heading);
+}
+/** Prints track or tyre impressions behind a machine at (rootX, rootZ) as its tracks advance. */
+function printTracks(vehicle, rootX, rootZ, heading) {
+  dummy.scale.set(vehicle === 'dumper' ? 4.5 : 1, 1, 1);
+  const c = Math.cos(heading),
+    s = Math.sin(heading),
+    backOffset = vehicle === 'drill' ? 2.4 : vehicle === 'dozer' ? 2.85 : 1.5,
+    lateralOffset = vehicle === 'drill' ? 1.6 : vehicle === 'dozer' || vehicle === 'dumper' ? 1.58 : 1.13;
+  for (const t of trackSystemsFor(vehicle)) {
     if (t.printDistance === undefined) t.printDistance = t.distance;
     const delta = t.distance - t.printDistance,
       sign = Math.sign(delta);
     if (Math.abs(delta) < 0.16) continue;
-    const back = activeVehicle === 'dumper' ? t.axleX : -backOffset * sign,
+    const back = vehicle === 'dumper' ? t.axleX : -backOffset * sign,
       lateral = t.side * lateralOffset;
-    const x = driveRoot.position.x + c * back + s * lateral,
-      z = driveRoot.position.z - s * back + c * lateral;
+    const x = rootX + c * back + s * lateral,
+      z = rootZ - s * back + c * lateral;
     if (sign !== t.printSign) {
       t.printSign = sign;
       t.lastPrint = { x, z };
@@ -127,7 +137,7 @@ function updateGroundTracks() {
         px = t.lastPrint ? t.lastPrint.x + (x - t.lastPrint.x) * f : x,
         pz = t.lastPrint ? t.lastPrint.z + (z - t.lastPrint.z) * f : z;
       dummy.position.set(px, -0.009, pz);
-      dummy.rotation.set(0, drive.heading, 0);
+      dummy.rotation.set(0, heading, 0);
       dummy.updateMatrix();
       trailMesh.setMatrixAt(trailCursor, dummy.matrix);
       trailCursor = (trailCursor + 1) % 4096;
@@ -155,9 +165,12 @@ function setSiteOverview(on, restore = true) {
   orbit.autoRotate = false;
   $('#orbit').setAttribute('aria-pressed', 'false');
   if (on || restore) {
+    // Leaving the overview in work mode eases to the followed machine's viewing angle.
     const destination = on
         ? { theta: 48, phi: 34, zoom: 1 }
-        : site.savedCamera || { theta: 48, phi: 65, zoom: 1 },
+        : workMode.active
+          ? { ...CREW_VIEWS[workMode.follow], zoom: 1 }
+          : site.savedCamera || { theta: 48, phi: 65, zoom: 1 },
       start = deg(orbit.getAzimuthalAngle());
     viewTween = {
       start: performance.now(),
@@ -176,11 +189,17 @@ function setSiteOverview(on, restore = true) {
   updateSiteUI();
 }
 function updateSiteUI() {
-  const x = exploreMode ? explorer.position.x : driveRoot.position.x,
-    z = exploreMode ? explorer.position.z : driveRoot.position.z,
-    heading = exploreMode
-      ? Math.atan2(-(target.z - camera.position.z), target.x - camera.position.x)
-      : drive.heading,
+  // In work mode the highlighted marker is the machine the camera follows.
+  const working = workMode.active,
+    focus = working ? vehiclePose(workMode.follow) : null,
+    x = focus ? focus.x : exploreMode ? explorer.position.x : driveRoot.position.x,
+    z = focus ? focus.z : exploreMode ? explorer.position.z : driveRoot.position.z,
+    heading = focus
+      ? focus.heading
+      : exploreMode
+        ? Math.atan2(-(target.z - camera.position.z), target.x - camera.position.x)
+        : drive.heading,
+    focusLabel = working ? vehicleFleet[workMode.follow].label + ' (followed)' : '',
     activeMarker = $('#mapMachine');
   activeMarker.setAttribute(
     'transform',
@@ -189,15 +208,26 @@ function updateSiteUI() {
   activeMarker.querySelector('circle').setAttribute('fill', exploreMode ? '#42b9b2' : '#edbd3b');
   activeMarker.setAttribute(
     'aria-label',
-    exploreMode ? 'Free explorer position' : 'Active ' + vehicleFleet[activeVehicle].label
+    working
+      ? focusLabel
+      : exploreMode
+        ? 'Free explorer position'
+        : 'Active ' + vehicleFleet[activeVehicle].label
   );
   let activeTitle = activeMarker.querySelector('title');
   if (!activeTitle) {
     activeTitle = document.createElementNS('http://www.w3.org/2000/svg', 'title');
     activeMarker.prepend(activeTitle);
   }
-  activeTitle.textContent = exploreMode ? 'Free explorer' : 'Active ' + vehicleFleet[activeVehicle].label;
-  const parked = Object.entries(vehicleFleet).filter(([id]) => exploreMode || id !== activeVehicle),
+  activeTitle.textContent = working
+    ? focusLabel
+    : exploreMode
+      ? 'Free explorer'
+      : 'Active ' + vehicleFleet[activeVehicle].label;
+  const parked = Object.entries(vehicleFleet).filter(([id]) =>
+      working ? id !== workMode.follow : exploreMode || id !== activeVehicle
+    ),
+    parkedWord = working ? ' working' : ' parked',
     markerColors = { excavator: '#748c73', drill: '#6d8ea7', dozer: '#a48142', dumper: '#d18d3b' },
     markerIds = ['mapInactiveMachine', 'mapInactiveMachine2', 'mapInactiveMachine3', 'mapInactiveMachine4'];
   markerIds.forEach((selector, index) => {
@@ -214,17 +244,17 @@ function updateSiteUI() {
       'transform',
       `translate(${pose.x.toFixed(2)} ${pose.z.toFixed(2)}) rotate(${-deg(pose.heading)})`
     );
-    marker.setAttribute('aria-label', record.label + ' parked');
+    marker.setAttribute('aria-label', record.label + parkedWord);
     marker.querySelector('circle').setAttribute('fill', markerColors[id]);
     let title = marker.querySelector('title');
     if (!title) {
       title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
       marker.prepend(title);
     }
-    title.textContent = record.label + ' parked';
+    title.textContent = record.label + parkedWord;
   });
   $('#mapPosition').textContent =
-    (exploreMode ? 'EXPLORER · ' : '') +
+    (working ? 'WORK MODE · ' : exploreMode ? 'EXPLORER · ' : '') +
     `X ${x >= 0 ? '+' : ''}${x.toFixed(1)} / Z ${z >= 0 ? '+' : ''}${z.toFixed(1)} m`;
   $('#siteMapToggle').setAttribute('aria-pressed', site.overview);
   $('#siteMapLabel').textContent = site.overview ? '↙ FOLLOW MACHINE' : '↗ SITE OVERVIEW';
