@@ -15,37 +15,11 @@ function setExploreMode(on, silent = false) {
   }
   if (on === exploreMode) return true;
   if (!on) return switchVehicle(lastVehicle, silent);
-  clearKeyboard();
-  joyEnd();
-  stopHold();
-  releaseDrive();
-  drive.left = drive.right = 0;
-  drive.braking = false;
-  drive.steering = 0;
-  if (activeVehicle === 'dumper') dumper.update(0, 0, 0, 0);
-  mode = 'manual';
-  resetTween = null;
-  const record = vehicleFleet[activeVehicle];
-  record.position.copy(driveRoot.position);
-  record.heading = drive.heading;
-  record.distance = drive.distance;
-  record.carrier.position.copy(record.position);
-  record.carrier.rotation.set(0, record.heading, 0);
-  if (activeVehicle === 'excavator') {
-    rock.pitch = rock.pitchV = rock.roll = rock.rollV = 0;
-    machine.rotation.set(0, 0, 0);
-    machine.position.set(0, 0, 0);
+  if (workMode.active) {
+    notify('Stop work mode before exploring on foot');
+    return false;
   }
-  if (activeVehicle === 'drill') {
-    pileRig.state.spinning = false;
-    pileRig.state.rpm = 0;
-  }
-  driveRoot.remove(record.model);
-  record.model.position.set(0, 0, 0);
-  record.model.rotation.set(0, 0, 0);
-  record.model.scale.set(1, 1, 1);
-  record.carrier.add(record.model);
-  lastVehicle = activeVehicle;
+  parkActiveVehicle();
   exploreMode = true;
   explorer.keys.clear();
   if (site.overview) setSiteOverview(false, false);
@@ -83,6 +57,40 @@ function setExploreMode(on, silent = false) {
   $('#modeStatus').textContent = 'FREE EXPLORE / READY';
   if (!silent) notify('Free explore · all machines parked');
   return true;
+}
+/** Moves the operated machine from the drive root onto its parked carrier, keeping its pose. */
+function parkActiveVehicle() {
+  clearKeyboard();
+  joyEnd();
+  stopHold();
+  releaseDrive();
+  drive.left = drive.right = 0;
+  drive.braking = false;
+  drive.steering = 0;
+  if (activeVehicle === 'dumper') dumper.update(0, 0, 0, 0);
+  mode = 'manual';
+  resetTween = null;
+  const record = vehicleFleet[activeVehicle];
+  record.position.copy(driveRoot.position);
+  record.heading = drive.heading;
+  record.distance = drive.distance;
+  record.carrier.position.copy(record.position);
+  record.carrier.rotation.set(0, record.heading, 0);
+  if (activeVehicle === 'excavator') {
+    rock.pitch = rock.pitchV = rock.roll = rock.rollV = 0;
+    machine.rotation.set(0, 0, 0);
+    machine.position.set(0, 0, 0);
+  }
+  if (activeVehicle === 'drill') {
+    pileRig.state.spinning = false;
+    pileRig.state.rpm = 0;
+  }
+  driveRoot.remove(record.model);
+  record.model.position.set(0, 0, 0);
+  record.model.rotation.set(0, 0, 0);
+  record.model.scale.set(1, 1, 1);
+  record.carrier.add(record.model);
+  lastVehicle = activeVehicle;
 }
 function updateExplorer(dt) {
   if (!exploreMode) return;

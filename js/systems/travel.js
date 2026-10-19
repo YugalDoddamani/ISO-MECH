@@ -106,7 +106,7 @@ $$('[data-drive]').forEach(b => {
 });
 
 function returnToStart() {
-  if (assembly.mode || exploreMode) return false;
+  if (assembly.mode || exploreMode || workMode.active) return false;
   clearKeyboard();
   joyEnd();
   releaseDrive();
@@ -313,12 +313,16 @@ function updateTrackMeshes() {
   }
 }
 function followMachine(dt, instant = false) {
+  // In work mode the camera follows the selected crew machine on its carrier.
+  const focus = workMode.active ? vehiclePose(workMode.follow) : null,
+    focusX = focus ? focus.x : driveRoot.position.x,
+    focusZ = focus ? focus.z : driveRoot.position.z,
+    focusVehicle = focus ? workMode.follow : activeVehicle,
+    focusHeading = focus ? focus.heading : drive.heading;
   desiredTarget.set(
-    driveRoot.position.x +
-      (activeVehicle === 'drill' ? 1.4 : 1) +
-      (1.5 * Math.cos(drive.heading) - 1) * assembly.value,
-    (activeVehicle === 'drill' ? 8.2 : 1.85) + 1.65 * assembly.value,
-    driveRoot.position.z - 1.5 * Math.sin(drive.heading) * assembly.value
+    focusX + (focusVehicle === 'drill' ? 1.4 : 1) + (1.5 * Math.cos(focusHeading) - 1) * assembly.value,
+    (focusVehicle === 'drill' ? (focus ? 4.5 : 8.2) : 1.85) + 1.65 * assembly.value,
+    focusZ - 1.5 * Math.sin(focusHeading) * assembly.value
   );
   desiredTarget.lerp(new THREE.Vector3(0, 0.8, 0), site.viewBlend);
   followDelta
@@ -328,8 +332,8 @@ function followMachine(dt, instant = false) {
   target.add(followDelta);
   camera.position.add(followDelta);
   orbit.target.copy(target);
-  const lightX = driveRoot.position.x * (1 - site.viewBlend),
-    lightZ = driveRoot.position.z * (1 - site.viewBlend),
+  const lightX = focusX * (1 - site.viewBlend),
+    lightZ = focusZ * (1 - site.viewBlend),
     lightScale = 1 + site.viewBlend * 2;
   sun.position.set(lightX - 3 * lightScale, 11 * lightScale, lightZ + 7 * lightScale);
   sun.target.position.set(lightX, 0, lightZ);

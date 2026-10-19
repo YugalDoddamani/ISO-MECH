@@ -117,22 +117,24 @@ function sync() {
   $('#manual').setAttribute('aria-pressed', mode === 'manual');
   $('#demo').setAttribute('aria-pressed', mode === 'demo');
   $('#demo').textContent = mode === 'demo' ? 'Ⅱ PAUSE DEMO' : '▶ ARM DEMO';
-  $('#modeStatus').textContent = assembly.mode
-    ? 'INSPECTION MODE'
-    : driveConsole
-      ? Math.abs(drive.left) + Math.abs(drive.right) > 0.02
-        ? 'TRAVEL ACTIVE'
-        : 'PARKED'
-      : mode === 'demo'
-        ? 'DEMO SEQUENCE'
-        : resetTween
-          ? 'RETURNING HOME'
-          : 'HYDRAULICS READY';
+  if (!workMode.active)
+    $('#modeStatus').textContent = assembly.mode
+      ? 'INSPECTION MODE'
+      : driveConsole
+        ? Math.abs(drive.left) + Math.abs(drive.right) > 0.02
+          ? 'TRAVEL ACTIVE'
+          : 'PARKED'
+        : mode === 'demo'
+          ? 'DEMO SEQUENCE'
+          : resetTween
+            ? 'RETURNING HOME'
+            : 'HYDRAULICS READY';
   syncDriveUI();
 }
 function apply() {
   for (const [key, c] of Object.entries(config)) c.obj.rotation[c.axis] = rad(angles[key]);
-  driveRoot.updateMatrixWorld(true);
+  // The excavator is under the drive root when operated and on its own carrier when parked or working.
+  (machine.parent || driveRoot).updateMatrixWorld(true);
 }
 const up = new THREE.Vector3(0, 1, 0),
   direction = new THREE.Vector3();
@@ -205,7 +207,7 @@ const checkPoints = [
   temp = new THREE.Vector3(),
   upperPoint = new THREE.Vector3();
 function poseValid() {
-  if (exploreMode || activeVehicle !== 'excavator') return true;
+  if (!workMode.active && (exploreMode || activeVehicle !== 'excavator')) return true;
   for (const p of checkPoints) {
     temp.set(...p);
     bucket.localToWorld(temp);
@@ -279,7 +281,7 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 function reset() {
-  if (assembly.mode || exploreMode) return;
+  if (assembly.mode || exploreMode || workMode.active) return;
   if (activeVehicle === 'drill') {
     clearKeyboard();
     joyEnd();
@@ -408,30 +410,69 @@ function stepHydraulics(dt) {
       .reduce((sum, actuatorState) => sum + Math.PI * actuatorState.radius * actuatorState.radius, 0);
     const maxAngularSpeed = c.speed * (dynamicsEnabled ? 1.35 : 1.7),
       loadFactor = 1 / (1 + 0.32 * load);
+    // The valve command follows the joint-angle error through the local cylinder ratio. Chasing the
+    // target cylinder length instead stalls where a linkage passes through its shortest or longest
+    // stroke (the bucket near 90°, the stick near -45°), so the bucket could never open far enough to dump.
     const desiredStroke =
       clamp(
-        (targetLength - currentLength) * 7,
+        (targetAngle - angles[key]) * jacobian * 7,
         -Math.abs(jacobian) * maxAngularSpeed,
         Math.abs(jacobian) * maxAngularSpeed
       ) * loadFactor;
     const flow = Math.abs(desiredStroke) * area;
     totalDemand += flow;
-    requests.push({ key, c, h, load, currentLength, targetLength, jacobian, area, desiredStroke, flow, v0 });
+    requests.push({
+      key,
+      c,
+      h,
+      load,
+      currentLength,
+      targetLength,
+      targetAngle,
+      maxAngularSpeed,
+      loadFactor,
+      jacobian,
+      area,
+      desiredStroke,
+      flow,
+      v0,
+    });
   }
   const pumpScale = totalDemand > 0 ? Math.min(1, hydraulicsPump.maxFlow / totalDemand) : 1;
   hydraulicsPump.demand = totalDemand * pumpScale;
   hydraulicsPump.utilization = hydraulicsPump.maxFlow ? hydraulicsPump.demand / hydraulicsPump.maxFlow : 0;
   for (const r of requests) {
-    const { key, c, h, load, currentLength, targetLength, jacobian, area, desiredStroke, v0 } = r;
+    const {
+      key,
+      c,
+      h,
+      load,
+      currentLength,
+      targetLength,
+      targetAngle,
+      maxAngularSpeed,
+      loadFactor,
+      jacobian,
+      area,
+      desiredStroke,
+      v0,
+    } = r;
     h.targetLength = targetLength;
     h.pressure = 0.25 + load * 0.45 + (Math.abs(desiredStroke) * pumpScale > 0.001 ? 0.35 : 0);
-    if (Math.abs(jacobian) < 1e-5 || area === 0) {
+    if (area === 0) {
       h.velocity = 0;
       h.flow = 0;
       continue;
     }
+    // At the stroke extreme the cylinder ratio vanishes; move by the angle error there.
     const strokeDelta = desiredStroke * pumpScale * dt,
-      angleDelta = strokeDelta / jacobian;
+      angleDelta =
+        Math.abs(jacobian) < 1e-4
+          ? clamp((targetAngle - angles[key]) * 7, -maxAngularSpeed, maxAngularSpeed) *
+            loadFactor *
+            pumpScale *
+            dt
+          : strokeDelta / jacobian;
     angles[key] = clamp(angles[key] + angleDelta, c.min, c.max);
     h.velocity = (angles[key] - old[key]) / Math.max(dt, 1e-8);
     h.cylinderLength = cylinderLengthAt(key, angles[key]);
@@ -451,7 +492,7 @@ function stepHydraulics(dt) {
         hydraulicState[key].velocity = 0;
       }
       apply();
-      if (performance.now() - lastLimitNotice > 1800) {
+      if (!workMode.active && performance.now() - lastLimitNotice > 1800) {
         notify('WORKSPACE LIMIT · hydraulic stop');
         lastLimitNotice = performance.now();
       }

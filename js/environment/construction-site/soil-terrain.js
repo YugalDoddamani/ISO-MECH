@@ -2,7 +2,8 @@
  * IsoMech V2 · Construction site · deformable soil
  *
  * Creates the soil simulation (window.createSoilSimulation) and the vertex-coloured terrain mesh that
- * samples its heightfield, plus the excavator bucket payload visual.
+ * samples its heightfield (tinted by height, placed fill, cuts and loose soil), plus the excavator
+ * bucket payload visual.
  *
  * Classic script that shares the application scope with the other modules (see index.html for the
  * load order). Names declared at the top level here are visible to every module loaded after it.
@@ -28,13 +29,41 @@ const soilRegions = [
   { x: 28, z: 4, r: 5.3 },
   { x: 34, z: -8, r: 8.5 },
   { x: 23.6, z: 28, r: 4.5 },
+  // Fill pad at the end of the haul lane, where the dumper tips and the dozer spreads in work mode.
+  { x: 35.5, z: -15.4, r: 5.2 },
 ];
 const soilVertexCount = soilSimulation.columns * soilSimulation.rows,
   soilPositions = new Float32Array(soilVertexCount * 3),
   soilColors = new Float32Array(soilVertexCount * 3),
   soilIndices = [];
 const soilBaseColor = new THREE.Color('#aa9a70').convertSRGBToLinear(),
-  soilTopColor = new THREE.Color('#b8a878').convertSRGBToLinear();
+  soilTopColor = new THREE.Color('#b8a878').convertSRGBToLinear(),
+  soilFillColor = new THREE.Color('#8b7850').convertSRGBToLinear(),
+  soilCutColor = new THREE.Color('#9b8256').convertSRGBToLinear(),
+  soilFreshColor = new THREE.Color('#87754e').convertSRGBToLinear(),
+  soilShade = new THREE.Color(),
+  soilInitialHeights = soilSimulation.heights.slice(),
+  soilInitialSoftness = soilSimulation.softness.slice();
+/**
+ * Soil colour for heightfield cell i. Heaps shade lighter towards their crest. Earthworks read from
+ * above like a gentle cut-and-fill map: placed fill (dumped, pushed or spread, still visible once the
+ * tracks have compacted it) is a darker brown, dug faces a warmer brown, and loose, just-moved soil a
+ * little darker again. Untouched ground keeps its original colour.
+ */
+function soilColor(i) {
+  const height = soilSimulation.heights[i],
+    start = soilInitialHeights[i],
+    shade = clamp(Math.max(0, height) / 1.8, 0, 1),
+    fill = clamp((height - start) / 0.15, 0, 1),
+    cut = clamp((start - Math.max(0, height)) / 0.35, 0, 1),
+    loose = clamp((soilSimulation.softness[i] - soilInitialSoftness[i]) / 0.45, 0, 1);
+  return soilShade
+    .copy(soilBaseColor)
+    .lerp(soilTopColor, shade * (1 - fill * 0.5))
+    .lerp(soilCutColor, cut * 0.45)
+    .lerp(soilFillColor, fill * 0.58)
+    .lerp(soilFreshColor, loose * 0.3);
+}
 for (let row = 0; row < soilSimulation.rows; row++)
   for (let col = 0; col < soilSimulation.columns; col++) {
     const i = row * soilSimulation.columns + col,
@@ -43,10 +72,10 @@ for (let row = 0; row < soilSimulation.rows; row++)
     soilPositions[i * 3] = x;
     soilPositions[i * 3 + 1] = 0.004 + Math.max(0, soilSimulation.heights[i]);
     soilPositions[i * 3 + 2] = z;
-    const shade = clamp(soilSimulation.heights[i] / 1.8, 0, 1);
-    soilColors[i * 3] = soilBaseColor.r + (soilTopColor.r - soilBaseColor.r) * shade;
-    soilColors[i * 3 + 1] = soilBaseColor.g + (soilTopColor.g - soilBaseColor.g) * shade;
-    soilColors[i * 3 + 2] = soilBaseColor.b + (soilTopColor.b - soilBaseColor.b) * shade;
+    const color = soilColor(i);
+    soilColors[i * 3] = color.r;
+    soilColors[i * 3 + 1] = color.g;
+    soilColors[i * 3 + 2] = color.b;
   }
 for (let row = 0; row < soilSimulation.rows - 1; row++)
   for (let col = 0; col < soilSimulation.columns - 1; col++) {
@@ -83,13 +112,8 @@ function updateSoilSurface() {
   for (let i = 0; i < soilVertexCount; i++) {
     const height = soilSimulation.heights[i];
     position.setY(i, 0.004 + Math.max(0, height));
-    const shade = clamp(Math.max(0, height) / 1.8, 0, 1);
-    color.setXYZ(
-      i,
-      soilBaseColor.r + (soilTopColor.r - soilBaseColor.r) * shade,
-      soilBaseColor.g + (soilTopColor.g - soilBaseColor.g) * shade,
-      soilBaseColor.b + (soilTopColor.b - soilBaseColor.b) * shade
-    );
+    const shade = soilColor(i);
+    color.setXYZ(i, shade.r, shade.g, shade.b);
   }
   position.needsUpdate = true;
   color.needsUpdate = true;

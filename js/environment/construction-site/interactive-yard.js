@@ -1,9 +1,10 @@
 /**
  * IsoMech V2 · Construction site · interactive yard
  *
- * Physics-backed props, loose soil particles, stockpile deformation, the per-step yard update
- * (props, bucket digging and dumping, track ruts, soil relaxation), terrain-following vehicle pose
- * and Reset Yard.
+ * Physics-backed props, loose soil particles, stockpile deformation, the per-step yard update and
+ * the machine–soil helpers shared by manual play and work mode: bucket digging, loading the dumper
+ * and dumping, dozer blade pushing, compaction, terrain-following vehicle pose, soil relaxation and
+ * Reset Yard.
  *
  * Classic script that shares the application scope with the other modules (see index.html for the
  * load order). Names declared at the top level here are visible to every module loaded after it.
@@ -83,13 +84,157 @@ function deformHeap(heap, point, dt) {
   }
   return changed;
 }
-function stepYard(dt) {
-  if (exploreMode) return;
-  driveRoot.updateMatrixWorld(true);
-  const tip = new THREE.Vector3();
-  bucket.localToWorld(tip.set(-0.8, -0.65, 0));
-  const speed = Math.abs(drive.left) + Math.abs(drive.right);
-  yardPhysics.syncFleet(vehicleFleet, activeVehicle, driveRoot.position, drive.heading, dt);
+// Contact points under each machine (machine-space x forward, z across) for compaction and terrain pose.
+const TERRAIN_CONTACTS = {
+  dumper: {
+    offsets: [-3.55, -1.85, 2.65].flatMap(x => [-1.58, 1.58].map(z => [x, z])),
+    wheelbase: dumper.dimensions.wheelbase,
+    trackWidth: dumper.dimensions.trackWidth,
+  },
+  drill: { offsets: [-2.4, 2.4].flatMap(x => [-1.6, 1.6].map(z => [x, z])), wheelbase: 4.8, trackWidth: 3.2 },
+  dozer: {
+    offsets: [-2.4, 2.4].flatMap(x => [-1.58, 1.58].map(z => [x, z])),
+    wheelbase: 4.8,
+    trackWidth: 3.16,
+  },
+  excavator: {
+    offsets: [-1.48, 1.48].flatMap(x => [-1.13, 1.13].map(z => [x, z])),
+    wheelbase: 2.96,
+    trackWidth: 2.26,
+  },
+};
+const yardTip = new THREE.Vector3(),
+  bodyPoint = new THREE.Vector3(),
+  bladeEdgeA = new THREE.Vector3(),
+  bladeEdgeB = new THREE.Vector3(),
+  bladeFacing = new THREE.Vector3();
+let dozerPushRate = 0;
+/** World position of the EX-240 bucket teeth (the point that cuts soil). */
+function bucketTip(out = new THREE.Vector3()) {
+  return bucket.localToWorld(out.set(-0.8, -0.65, 0));
+}
+/** True when a world point is above the dumper's lowered body and inside its walls. */
+function dumperBodyUnder(point) {
+  if (dumper.state.tip > 3) return false;
+  dumper.bed.updateWorldMatrix(true, false);
+  bodyPoint.copy(point);
+  dumper.bed.worldToLocal(bodyPoint);
+  const body = dumper.body;
+  return (
+    bodyPoint.x > body.minX + 0.2 &&
+    bodyPoint.x < body.maxX - 0.2 &&
+    Math.abs(bodyPoint.z) < body.halfWidth - 0.15 &&
+    bodyPoint.y > body.floorY &&
+    bodyPoint.y < body.rimY + 4
+  );
+}
+/** An opened bucket over the dumper body pours its payload into it, up to the body's capacity. */
+function loadDumperFromBucket(tip) {
+  if (!soilSimulation || !dumperBodyUnder(tip)) return 0;
+  const room = Math.max(0, dumper.capacity - dumper.state.payloadVolume),
+    moved = soilSimulation.unloadBucket(Math.min(room, soilSimulation.bucketPayload));
+  if (moved <= 0) return 0;
+  dumper.state.payloadVolume += moved;
+  dumper.update(0);
+  spawnEffect(dustPool, tip.x, Math.max(1.2, tip.y - 1.2), tip.z, 12, 'dust');
+  cueSound('load', tip.x, tip.y, tip.z, moved / soilSimulation.payloadCapacity);
+  return moved;
+}
+/** Bucket digging and dumping for the EX-240, shared by manual operation and work mode. */
+function stepBucketSoil(tip) {
+  if (!soilSimulation) return 0;
+  if (!lastBucketCutPoint) lastBucketCutPoint = tip.clone();
+  const removed = soilSimulation.scoopSweep(lastBucketCutPoint, tip, {
+    radius: 0.72,
+    capacity: soilSimulation.payloadCapacity,
+  });
+  if (removed > 1e-10) {
+    soilSurfaceDirty = true;
+    updateBucketPayloadVisual();
+    scatterSoil(tip.x, Math.max(0.08, tip.y), tip.z);
+    cueSound('scoop', tip.x, tip.y, tip.z, removed / 0.02);
+  }
+  lastBucketCutPoint.copy(tip);
+  if (angles.bucket >= 128 && soilSimulation.bucketPayload > 1e-8) {
+    if (loadDumperFromBucket(tip) > 0) updateBucketPayloadVisual();
+    // Over a full body the rest stays in the bucket; anywhere else it falls to the ground.
+    else if (!dumperBodyUnder(tip)) {
+      const dumped = soilSimulation.dumpBucket(tip.x, tip.z, 1.2);
+      if (dumped > 0) {
+        soilSurfaceDirty = true;
+        updateBucketPayloadVisual();
+        cueSound('pour', tip.x, tip.y, tip.z, dumped / soilSimulation.payloadCapacity);
+      }
+    }
+  }
+  return removed;
+}
+/** The dozer blade pushes loose soil ahead of its cutting edge. Returns the volume moved this step. */
+function pushWithBlade() {
+  if (!soilSimulation) return 0;
+  dozer.blade.updateWorldMatrix(true, false);
+  dozer.blade.localToWorld(bladeEdgeA.set(0.31, -0.02, -2.79));
+  dozer.blade.localToWorld(bladeEdgeB.set(0.31, -0.02, 2.79));
+  bladeFacing.set(1, 0, 0).transformDirection(dozer.blade.matrixWorld);
+  const moved = soilSimulation.bladePush(
+    bladeEdgeA.x,
+    bladeEdgeA.z,
+    bladeEdgeA.y,
+    bladeEdgeB.x,
+    bladeEdgeB.z,
+    bladeEdgeB.y,
+    bladeFacing.x,
+    bladeFacing.z
+  );
+  if (moved > 1e-9) {
+    soilSurfaceDirty = true;
+    effectClock.blade = (effectClock.blade || 0) - moved;
+    if (effectClock.blade <= 0) {
+      const t = rand();
+      spawnEffect(
+        dustPool,
+        bladeEdgeA.x + (bladeEdgeB.x - bladeEdgeA.x) * t + bladeFacing.x * 0.8,
+        0.25,
+        bladeEdgeA.z + (bladeEdgeB.z - bladeEdgeA.z) * t + bladeFacing.z * 0.8,
+        3,
+        'dust'
+      );
+      effectClock.blade = 0.06;
+    }
+  }
+  dozerPushRate = moved;
+  return moved;
+}
+/** Tracks and tyres compact the ground they cross. */
+function compactUnder(vehicle, x, z, heading) {
+  const contacts = TERRAIN_CONTACTS[vehicle] || TERRAIN_CONTACTS.excavator,
+    c = Math.cos(heading),
+    s = Math.sin(heading);
+  for (const [localX, localZ] of contacts.offsets)
+    soilSimulation.compact(x + c * localX + s * localZ, z - s * localX + c * localZ, 0.62, 0.0025);
+}
+/** Ground height, pitch, roll and softness under a machine standing at (x, z) with a heading. */
+function terrainPoseAt(vehicle, x, z, heading, out = {}) {
+  const contacts = TERRAIN_CONTACTS[vehicle] || TERRAIN_CONTACTS.excavator,
+    c = Math.cos(heading),
+    s = Math.sin(heading),
+    samples = contacts.offsets.map(([lx, lz]) => {
+      const sample = soilSimulation.sample(x + c * lx + s * lz, z - s * lx + c * lz);
+      return { x: lx, z: lz, height: clamp(sample.height, -0.06, 4), softness: sample.softness };
+    });
+  const average = list => (list.length ? list.reduce((sum, p) => sum + p.height, 0) / list.length : 0),
+    front = average(samples.filter(p => p.x > 0)),
+    rear = average(samples.filter(p => p.x < 0)),
+    left = average(samples.filter(p => p.z < 0)),
+    right = average(samples.filter(p => p.z > 0));
+  out.height = average(samples);
+  out.pitch = clamp(Math.atan2(front - rear, contacts.wheelbase), -0.28, 0.28);
+  out.roll = clamp(Math.atan2(right - left, contacts.trackWidth), -0.22, 0.22);
+  out.softness = samples.reduce((sum, p) => sum + p.softness, 0) / Math.max(1, samples.length);
+  return out;
+}
+/** Physics props: step the cannon-es world, copy body poses back and raise impact dust and sounds. */
+function stepYardProps(dt) {
   yardPhysics.step(dt);
   for (const b of yardBodies) {
     const body = yardPhysics.syncProp(b.object);
@@ -102,6 +247,7 @@ function stepYard(dt) {
     if (linear > 0.035 || angular > 0.08) b.active = true;
     if (b.active && b.impactCooldown <= 0 && linear > 1.2) {
       spawnEffect(dustPool, b.object.position.x, 0.18, b.object.position.z, 4, 'dust');
+      cueSound('impact-' + b.kind, b.object.position.x, 0.2, b.object.position.z, Math.sqrt(linear) / 3);
       b.impactCooldown = 0.34;
     }
     if (b.kind === 'cone') {
@@ -110,84 +256,30 @@ function stepYard(dt) {
       b.fall = Math.max(b.fall, Math.min(Math.PI / 2, Math.hypot(rotation.x, rotation.z)));
     }
   }
-  if (activeVehicle === 'excavator' && soilSimulation) {
-    if (!lastBucketCutPoint) lastBucketCutPoint = tip.clone();
-    const removed = soilSimulation.scoopSweep(lastBucketCutPoint, tip, {
-      radius: 0.72,
-      capacity: soilSimulation.payloadCapacity,
-    });
-    if (removed > 1e-10) {
-      soilSurfaceDirty = true;
-      updateBucketPayloadVisual();
-      scatterSoil(tip.x, Math.max(0.08, tip.y), tip.z);
-    }
-    lastBucketCutPoint.copy(tip);
-    if (angles.bucket >= 128 && soilSimulation.bucketPayload > 1e-8) {
-      const dumped = soilSimulation.dumpBucket(tip.x, tip.z, 1.2);
-      if (dumped > 0) {
-        soilSurfaceDirty = true;
-        updateBucketPayloadVisual();
-      }
-    }
-  }
-  if (speed > 0.03 && soilSimulation) {
-    const offsets =
-      activeVehicle === 'dumper'
-        ? [-3.55, -1.85, 2.65].flatMap(x => [-1.58, 1.58].map(z => [x, z]))
-        : activeVehicle === 'dozer'
-          ? [-2.4, 2.4].flatMap(x => [-1.58, 1.58].map(z => [x, z]))
-          : activeVehicle === 'drill'
-            ? [-2.4, 2.4].flatMap(x => [-1.6, 1.6].map(z => [x, z]))
-            : [-1.48, 1.48].flatMap(x => [-1.13, 1.13].map(z => [x, z]));
-    const c = Math.cos(drive.heading),
-      s = Math.sin(drive.heading);
-    for (const [localX, localZ] of offsets) {
-      const x = driveRoot.position.x + c * localX + s * localZ,
-        z = driveRoot.position.z - s * localX + c * localZ;
-      soilSimulation.compact(x, z, 0.62, 0.0025);
-    }
-  }
+}
+/** Slopes relax towards the angle of repose; the surface mesh follows the heightfield. */
+function settleSoil(dt) {
   if (soilSimulation.relax(dt, 1) > 1e-10) soilSurfaceDirty = true;
   if (soilSurfaceDirty) updateSoilSurface();
+}
+function stepYard(dt) {
+  if (exploreMode) return;
+  driveRoot.updateMatrixWorld(true);
+  const tip = bucketTip(yardTip);
+  const speed = Math.abs(drive.left) + Math.abs(drive.right);
+  yardPhysics.syncFleet(vehicleFleet, activeVehicle, driveRoot.position, drive.heading, dt);
+  stepYardProps(dt);
+  if (activeVehicle === 'excavator' && soilSimulation) stepBucketSoil(tip);
+  dozerPushRate = 0;
+  if (activeVehicle === 'dozer' && soilSimulation && (drive.left + drive.right) / 2 > 0.02) pushWithBlade();
+  if (speed > 0.03 && soilSimulation)
+    compactUnder(activeVehicle, driveRoot.position.x, driveRoot.position.z, drive.heading);
+  settleSoil(dt);
   updateTerrainPose();
 }
 function updateTerrainPose() {
-  if (exploreMode || !soilSimulation) return;
-  let offsets, wheelbase, trackWidth;
-  if (activeVehicle === 'dumper') {
-    offsets = [-3.55, -1.85, 2.65].flatMap(x => [-1.58, 1.58].map(z => [x, z]));
-    wheelbase = dumper.dimensions.wheelbase;
-    trackWidth = dumper.dimensions.trackWidth;
-  } else if (activeVehicle === 'drill') {
-    offsets = [-2.4, 2.4].flatMap(x => [-1.6, 1.6].map(z => [x, z]));
-    wheelbase = 4.8;
-    trackWidth = 3.2;
-  } else if (activeVehicle === 'dozer') {
-    offsets = [-2.4, 2.4].flatMap(x => [-1.58, 1.58].map(z => [x, z]));
-    wheelbase = 4.8;
-    trackWidth = 3.16;
-  } else {
-    offsets = [-1.48, 1.48].flatMap(x => [-1.13, 1.13].map(z => [x, z]));
-    wheelbase = 2.96;
-    trackWidth = 2.26;
-  }
-  const c = Math.cos(drive.heading),
-    s = Math.sin(drive.heading),
-    samples = offsets.map(([lx, lz]) => {
-      const x = driveRoot.position.x + c * lx + s * lz,
-        z = driveRoot.position.z - s * lx + c * lz,
-        sample = soilSimulation.sample(x, z);
-      return { x: lx, z: lz, height: clamp(sample.height, -0.06, 4), softness: sample.softness };
-    });
-  const average = list => (list.length ? list.reduce((sum, p) => sum + p.height, 0) / list.length : 0),
-    front = average(samples.filter(p => p.x > 0)),
-    rear = average(samples.filter(p => p.x < 0)),
-    left = average(samples.filter(p => p.z < 0)),
-    right = average(samples.filter(p => p.z > 0));
-  terrainResponse.height = average(samples);
-  terrainResponse.pitch = clamp(Math.atan2(front - rear, wheelbase), -0.28, 0.28);
-  terrainResponse.roll = clamp(Math.atan2(right - left, trackWidth), -0.22, 0.22);
-  terrainResponse.softness = samples.reduce((sum, p) => sum + p.softness, 0) / Math.max(1, samples.length);
+  if (exploreMode || workMode.active || !soilSimulation) return;
+  terrainPoseAt(activeVehicle, driveRoot.position.x, driveRoot.position.z, drive.heading, terrainResponse);
   driveRoot.position.y = terrainResponse.height;
   const record = vehicleFleet[activeVehicle];
   if (record) record.position.y = driveRoot.position.y;

@@ -17,6 +17,8 @@
   <link rel="stylesheet" href="css/vehicle-studio.css">
   <link rel="stylesheet" href="css/mobile-overrides.css">
   <link rel="stylesheet" href="css/dumper-and-explore.css">
+  <link rel="stylesheet" href="css/work-mode.css">
+  <link rel="stylesheet" href="css/sound.css">
 
   <!--
     Libraries from jsDelivr, pinned to the exact builds ST.html used to inline, with Subresource Integrity.
@@ -87,6 +89,8 @@
   <script defer src="js/ui/studio-controls.js"></script>
   <script defer src="js/systems/explore-mode.js"></script>
   <script defer src="js/app/vehicle-switch.js"></script>
+  <script defer src="js/systems/work-mode.js"></script>
+  <script defer src="js/systems/site-audio.js"></script>
   <!-- Main loop and public API (keep last) -->
   <script defer src="js/app/main.js"></script>
   <script defer src="js/app/api.js"></script>
@@ -115,7 +119,9 @@
     <button id="closeHelp" aria-label="Close interaction guide">CLOSE ×</button><b>A closer look at heavy machinery.</b>
     <p>Drag the stage to orbit and look around. Scroll or pinch to zoom. Camera views do not change a vehicle's pose.</p>
     <p>EX–240: hold Q/E for boom, W/S for stick, A/D for bucket, and ←/→ for slew. PR–180: Q/E rake the mast, W/S feed the rotary head, A/D retract/extend Kelly, and ←/→ slew. Spin and lower the auger to leave a shallow bore mark with visible depth and dust.</p>
-    <p>Dozer: Q/E raise or lower the blade; A/D angle it. Dumper: Q/E raise or lower the tipping body; sustained tipping releases the illustrative load. Both are representative procedural models, not OEM CAD.</p>
+    <p>Dozer: Q/E raise or lower the blade; A/D angle it; drive forward with the blade down to push and spread soil. Dumper: Q/E raise or lower the tipping body; sustained tipping releases the load. Park the dumper beside the EX–240 and open a full bucket (D) over its body to load it; the body holds four bucket passes. Both are representative procedural models, not OEM CAD.</p>
+    <p>Work mode: press ▶ WORK MODE and every machine works on its own. The EX–240 loads the dumper from the earth stockpile, the dumper tips on the fill pad, the dozer spreads each load and the PR–180 bores piles. Follow any machine from the console, or watch the whole site. Esc or ■ STOP WORK MODE hands control back.</p>
+    <p>Sound: engines, hydraulics, tracks, the reversing alarm and soil are synthesised live and start with your first click. The SOUND button or M mutes them.</p>
     <p>Free explore: cycle to FREE EXPLORE, then use W/A/S/D to move, Q/E to rise or descend, Shift to move faster, and drag to look. The selected vehicle is parked; no machine is controlled or occupied. Use the vehicle button or Esc to return.</p>
     <p>↑/↓ travel; J/L steer. Space toggles the brake; B holds it temporarily; Z gives quarter-speed machine motion. Shift toggles dynamics outside free explore. 1/2/3 selects work, travel, or excavator assembly; F1–F5 selects camera views; O toggles orbit. R resets the active work pose, while Return to parking bay resets travel and the machine pose if the bay is clear. Use the joystick and travel pad on touchscreens.</p>
     <p>The live site plan covers the 90 × 68 m yard and four fleet bays. Parked machines keep their positions, headings, and travel distances. Cones and fuel drums react to contact; pipes roll; stockpiles deform; exhaust, travel, tipping, and drilling can create smoke, dust, and soil effects. Reset Yard restores props, soil, and bore marks. These are visual interactions, not full rigid-body, geotechnical, or drilling physics.</p>

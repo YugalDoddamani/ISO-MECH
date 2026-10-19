@@ -4,7 +4,17 @@ const { spawn } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const BROWSER_CHECKS = ['smoke', 'cdn', 'vehicles', 'travel', 'excavator', 'yard', 'interface'];
+const BROWSER_CHECKS = [
+  'smoke',
+  'cdn',
+  'vehicles',
+  'travel',
+  'excavator',
+  'yard',
+  'work',
+  'audio',
+  'interface',
+];
 
 (async () => {
   const selected = process.argv.slice(2);

@@ -97,6 +97,10 @@ function selectSystem(id) {
   });
 }
 function inspectAssembly() {
+  if (workMode.active) {
+    notify('Stop work mode to inspect the excavator');
+    return;
+  }
   if (activeVehicle !== 'excavator') {
     notify('Assembly inspection is available for the excavator');
     return;

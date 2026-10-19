@@ -1,7 +1,8 @@
 /**
  * IsoMech V2 · Construction site · effects
  *
- * Instanced dust and exhaust-smoke particle pools and the per-step effect emitters.
+ * Instanced dust and exhaust-smoke particle pools, the per-machine exhaust and travel-dust emitters,
+ * and releasing the dumper's load onto the ground.
  *
  * Classic script that shares the application scope with the other modules (see index.html for the
  * load order). Names declared at the top level here are visible to every module loaded after it.
@@ -28,7 +29,7 @@ function makeEffectPool(name, color, count, opacity) {
 }
 const dustPool = makeEffectPool('Soft drifting dust', '#b9a77b', 128, 0.22),
   smokePool = makeEffectPool('Engine exhaust smoke', '#60665f', 72, 0.16);
-const effectClock = { dust: 0, smoke: 0, drill: 0 },
+const effectClock = { dust: 0, smoke: 0, drill: 0, blade: 0 },
   effectDummy = new THREE.Object3D();
 function spawnEffect(pool, x, y, z, count, kind = 'dust') {
   for (let i = 0; i < count; i++) {
@@ -77,61 +78,62 @@ function updateEffectPool(pool, dt, smoke = false) {
 function clearEffectPool(pool) {
   for (const p of pool.particles) p.life = 0;
 }
+/** Exhaust smoke and travel dust for one machine; `clock` holds its smoke and dust timers. */
+function emitMachineEffects(id, x, z, heading, velocity, clock) {
+  const record = vehicleFleet[id],
+    c = Math.cos(heading),
+    s = Math.sin(heading),
+    localPoint = (lx, y, lz) => ({ x: x + c * lx + s * lz, y, z: z - s * lx + c * lz }),
+    exhaust =
+      record.exhaust || (id === 'excavator' ? { x: -1.72, y: 2.35, z: -0.62 } : { x: -1.8, y: 2.4, z: -0.7 });
+  if (clock.smoke <= 0) {
+    const p = localPoint(exhaust.x, exhaust.y, exhaust.z);
+    spawnEffect(smokePool, p.x, p.y, p.z, 1, 'smoke');
+    clock.smoke = 0.34;
+  }
+  if (velocity > 0.12 && clock.dust <= 0) {
+    const back = id === 'dumper' ? 3.5 : id === 'dozer' ? 2.7 : id === 'drill' ? 2.2 : 1.45,
+      lateral = id === 'dumper' || id === 'dozer' ? 1.55 : id === 'drill' ? 1.45 : 1.05;
+    for (const side of [-1, 1]) {
+      const p = localPoint(-back, 0, side * lateral);
+      spawnEffect(dustPool, p.x, 0.08, p.z, 3, 'dust');
+    }
+    clock.dust = 0.14;
+  }
+}
+/** Tipping releases the dump body's load behind the tailgate at (x, z). Returns the volume placed. */
+function releaseDumperLoad(x, z) {
+  spawnEffect(dustPool, x, 0.14, z, 28, 'dust');
+  for (let i = 0; i < 8; i++) scatterSoil(x, 0.18, z);
+  if (!soilSimulation || dumper.state.payloadVolume <= 0) return 0;
+  const volume = dumper.state.payloadVolume,
+    // A bigger load spreads wider: roughly a cone at the angle of repose.
+    radius = 1.45 * Math.cbrt(Math.max(1, volume / 0.82)),
+    placed = soilSimulation.deposit(x, z, volume, radius);
+  dumper.state.payloadVolume = Math.max(0, volume - placed);
+  lastDumperDeposit = { x, z, volume: placed };
+  soilSurfaceDirty = true;
+  cueSound('tip', x, 1, z, placed);
+  return placed;
+}
 function stepEffects(dt) {
   effectClock.smoke -= dt;
   effectClock.dust -= dt;
-  if (!exploreMode) {
-    const record = vehicleFleet[activeVehicle],
-      heading = drive.heading,
-      c = Math.cos(heading),
-      s = Math.sin(heading),
-      localPoint = (x, y, z) => ({
-        x: driveRoot.position.x + c * x + s * z,
-        y,
-        z: driveRoot.position.z - s * x + c * z,
-      }),
-      exhaust =
-        record.exhaust ||
-        (activeVehicle === 'excavator' ? { x: -1.72, y: 2.35, z: -0.62 } : { x: -1.8, y: 2.4, z: -0.7 });
-    if (effectClock.smoke <= 0) {
-      const p = localPoint(exhaust.x, exhaust.y, exhaust.z);
-      spawnEffect(smokePool, p.x, p.y, p.z, 1, 'smoke');
-      effectClock.smoke = 0.34;
-    }
-    const velocity = (Math.abs(drive.left) + Math.abs(drive.right)) * 0.5;
-    if (velocity > 0.12 && effectClock.dust <= 0) {
-      const back =
-          activeVehicle === 'dumper'
-            ? 3.5
-            : activeVehicle === 'dozer'
-              ? 2.7
-              : activeVehicle === 'drill'
-                ? 2.2
-                : 1.45,
-        lateral =
-          activeVehicle === 'dumper' || activeVehicle === 'dozer'
-            ? 1.55
-            : activeVehicle === 'drill'
-              ? 1.45
-              : 1.05;
-      for (const side of [-1, 1]) {
-        const p = localPoint(-back, 0, side * lateral);
-        spawnEffect(dustPool, p.x, 0.08, p.z, 3, 'dust');
-      }
-      effectClock.dust = 0.14;
-    }
-    if (activeVehicle === 'dumper' && dumper.state.dumped && !lastDumperDumped) {
-      const p = localPoint(-4.35, 0.1, 0);
-      spawnEffect(dustPool, p.x, 0.14, p.z, 28, 'dust');
-      for (let i = 0; i < 8; i++) scatterSoil(p.x, 0.18, p.z);
-      if (soilSimulation && dumper.state.payloadVolume > 0) {
-        const volume = dumper.state.payloadVolume,
-          placed = soilSimulation.deposit(p.x, p.z, volume, 1.45);
-        dumper.state.payloadVolume = Math.max(0, volume - placed);
-        lastDumperDeposit = { x: p.x, z: p.z, volume: placed };
-        soilSurfaceDirty = true;
-      }
-    }
+  if (!exploreMode && !workMode.active) {
+    const heading = drive.heading;
+    emitMachineEffects(
+      activeVehicle,
+      driveRoot.position.x,
+      driveRoot.position.z,
+      heading,
+      (Math.abs(drive.left) + Math.abs(drive.right)) * 0.5,
+      effectClock
+    );
+    if (activeVehicle === 'dumper' && dumper.state.dumped && !lastDumperDumped)
+      releaseDumperLoad(
+        driveRoot.position.x + Math.cos(heading) * -4.35,
+        driveRoot.position.z - Math.sin(heading) * -4.35
+      );
   }
   lastDumperDumped = dumper.state.dumped;
   updateSoilParticles(dt);

@@ -56,6 +56,25 @@ window.addEventListener('keydown', e => {
     if (!e.repeat) $('#help').click();
     return;
   }
+  if (code === 'KeyM') {
+    e.preventDefault();
+    if (!e.repeat) toggleSound();
+    return;
+  }
+  if (workMode.active) {
+    // No machine is under operator control: Esc stops work mode, camera keys still work.
+    if (code === 'Escape') {
+      e.preventDefault();
+      setWorkMode(false);
+    } else if (/^F[1-5]$/.test(code)) {
+      e.preventDefault();
+      view(['front', 'left', 'right', 'rear', 'top'][Number(code.slice(1)) - 1]);
+    } else if (code === 'KeyO') {
+      e.preventDefault();
+      $('#orbit').click();
+    }
+    return;
+  }
   if (code === 'Escape') {
     e.preventDefault();
     if (exploreMode) {
@@ -142,7 +161,7 @@ window.addEventListener('keyup', e => {
   explorer.keys.delete(e.code);
   const travel = { ArrowUp: 'forward', ArrowDown: 'reverse', KeyB: 'brake', KeyJ: 'left', KeyL: 'right' };
   if (travel[e.code]) driveKeys.delete(travel[e.code]);
-  if (e.code in keyBindings) {
+  if (e.code in keyBindings && !workMode.active) {
     const joint = keyBindings[e.code][0];
     hydraulicState[joint].target = angles[joint];
     hydraulicState[joint].velocity = 0;

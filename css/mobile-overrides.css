@@ -37,3 +37,13 @@
     right: 48px;
   }
 }
+/* Phones show only the selected machine's sliders. (Before, the dozer and dumper sliders also showed,
+   and worked, while the PR–180 or EX–240 was selected, moving the parked machines.) */
+.drill-mode .dozer-mobile-control,
+.drill-mode .dumper-mobile-control,
+.dozer-mode .dumper-mobile-control,
+body:not(.drill-mode):not(.dozer-mode):not(.dumper-mode) .rig-mobile-control,
+body:not(.drill-mode):not(.dozer-mode):not(.dumper-mode) .dozer-mobile-control,
+body:not(.drill-mode):not(.dozer-mode):not(.dumper-mode) .dumper-mobile-control {
+  display: none !important;
+}

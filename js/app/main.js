@@ -1,8 +1,9 @@
 /**
  * IsoMech V2 · Main loop
  *
- * Initial pose, the deterministic 60 Hz fixed-step simulation, the render loop and start-up
- * (selects the PR–180 and renders the first frame).
+ * Initial pose, the deterministic 60 Hz fixed-step simulation (operator, free-explore and work-mode
+ * branches), the render loop with site audio, and start-up (selects the PR–180 and renders the first
+ * frame).
  *
  * Classic script that shares the application scope with the other modules (see index.html for the
  * load order). Names declared at the top level here are visible to every module loaded after it.
@@ -26,6 +27,11 @@ let uiTime = 0;
 function simulateFixedStep(dt) {
   simulationStepSerial++;
   if (assembly.mode) {
+    stepEffects(dt);
+    return;
+  }
+  if (workMode.active) {
+    stepWorkMode(dt);
     stepEffects(dt);
     return;
   }
@@ -54,11 +60,13 @@ const fixedStepper = window.createFixedStepper({
   step: simulateFixedStep,
 });
 function finishFixedStepBatch() {
-  if (activeVehicle === 'excavator') {
+  if (activeVehicle === 'excavator' || workMode.active) {
     updateTrackMeshes();
     apply();
     updateHydraulics();
   }
+  // Work mode reshapes the soil every step; rebuild the surface mesh once per frame instead.
+  if (workMode.active && soilSurfaceDirty) updateSoilSurface();
 }
 function advanceFixedSteps(count) {
   fixedStepper.advance(count);
@@ -74,7 +82,7 @@ function frame() {
   const rawElapsed = clock.getDelta(),
     elapsed = Math.min(rawElapsed, 0.12),
     now = performance.now();
-  if (!assembly.mode && !exploreMode) {
+  if (!assembly.mode && !exploreMode && !workMode.active) {
     if (resetTween) {
       const t = clamp((now - resetTween.start) / (reduced ? 1 : 1000), 0, 1),
         home = {};
@@ -102,7 +110,7 @@ function frame() {
     }
   }
   fixedStepper.update(rawElapsed);
-  if (activeVehicle === 'excavator' && !assembly.mode) finishFixedStepBatch();
+  if ((activeVehicle === 'excavator' || workMode.active) && !assembly.mode) finishFixedStepBatch();
   if (assembly.mode) stepAssembly(now);
   updateSiteFrame(elapsed);
   if (!exploreMode) followMachine(elapsed);
@@ -123,11 +131,13 @@ function frame() {
     syncDozerUI();
     syncDumperUI();
     updateSiteUI();
+    if (workMode.active) updateWorkUI();
     const bearing = Math.round((((90 - deg(orbit.getAzimuthalAngle())) % 360) + 360) % 360) % 360;
     $('#bearing').innerHTML = String(bearing).padStart(3, '0') + '<small>°</small>';
     $('#elevation').innerHTML = Math.round(90 - deg(orbit.getPolarAngle())) + '<small>°</small>';
   }
   updateAssemblyLabels();
+  updateSiteAudio(elapsed);
   renderer.render(scene, camera);
   if (firstPaint) {
     firstPaint = false;

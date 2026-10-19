@@ -2,11 +2,11 @@
 
 ISO-MECH V2 is a static site with no build step. `index.html` contains the page markup and loads, in order:
 
-1. **11 stylesheets** from `css/`, linked in cascade order (later files override earlier ones).
+1. **13 stylesheets** from `css/`, linked in cascade order (later files override earlier ones).
 2. **3 libraries** from the jsDelivr CDN, pinned with Subresource Integrity: three.js r128, its `OrbitControls`, and cannon-es 0.20.0.
-3. **45 application scripts** from `js/`: classic scripts that share one global scope.
+3. **47 application scripts** from `js/`: classic scripts that share one global scope.
 
-This layout is a systematic split of the former single-file build (`ST.html`). That file inlined the three libraries, six standalone factory scripts, and one 138 KB application closure. The factories became one file each, unchanged. The closure was cut into the modules below at statement boundaries, keeping the original statement order. Its code was then formatted with Prettier, and the module is proven identical at the syntax-tree level (see [Provenance](#provenance-and-verification)).
+This layout started as a systematic split of the former single-file build (`ST.html`). That file inlined the three libraries, six standalone factory scripts, and one 138 KB application closure. The factories became one file each, unchanged. The closure was cut into the modules below at statement boundaries, keeping the original statement order. Its code was then formatted with Prettier, and the module is proven identical at the syntax-tree level (see [Provenance](#provenance-and-verification)).
 
 ## Why classic scripts that share a scope
 
@@ -28,13 +28,13 @@ Order also matters for **side effects**. Scene objects, materials, DOM elements 
 | | **Standalone factories** | |
 | 1 | `js/vehicles/pile-rig/model.js` | PR–180 procedural model and articulation (`window.createPileRig`) |
 | 2 | `js/vehicles/bulldozer/model.js` | Crawler dozer procedural model and blade (`window.createBulldozer`) |
-| 3 | `js/vehicles/dumper/model.js` | Off-highway dumper model, steering and tipping body (`window.createDumper`) |
-| 4 | `js/environment/soil-simulation.js` | Deterministic, volume-conserving earthworks heightfield (`window.createSoilSimulation`) |
+| 3 | `js/vehicles/dumper/model.js` | Off-highway dumper model, steering, tipping body, 3.28 m³ capacity and payload mound (`window.createDumper`) |
+| 4 | `js/environment/soil-simulation.js` | Deterministic, volume-conserving earthworks heightfield: digging, dumping, unloading the bucket, blade pushing, drilling, relaxation (`window.createSoilSimulation`) |
 | 5 | `js/physics/yard-physics.js` | cannon-es world for yard props and machine envelopes (`window.createYardPhysics`) |
 | 6 | `js/physics/fixed-stepper.js` | Fixed 60 Hz step accumulator (`window.createFixedStepper`) |
 | | **Core** | |
 | 7 | `js/core/runtime.js` | Runtime: DOM helpers ($, $$), the start-up guard, the WebGL renderer, the scene and small math helpers. This is the first application module; every later module relies on the names declared here. |
-| 8 | `js/core/state.js` | Shared application state: Active vehicle and free-explore flags, the site/overview state (including the 90 × 68 m yard bounds), the exploded-assembly state, and the free-explore camera state. |
+| 8 | `js/core/state.js` | Shared application state: Active vehicle and free-explore flags, the site/overview state (including the 90 × 68 m yard bounds), the exploded-assembly state, the free-explore camera state, the work-mode state and the `cueSound()` queue of one-shot sound cues. |
 | 9 | `js/ui/status.js` | Status toast: notify(message) shows a short-lived status message over the stage. |
 | 10 | `js/core/camera.js` | Camera: Orthographic camera and OrbitControls, camera presets (ISO/FRONT/LEFT/RIGHT/REAR/TOP), auto orbit, resize handling and the frustum that blends between close-up, assembly and site-overview framing. |
 | 11 | `js/core/lighting.js` | Lighting: Hemisphere sky light, the shadow-casting sun and a cool fill light. |
@@ -49,11 +49,11 @@ Order also matters for **side effects**. Scene objects, materials, DOM elements 
 | 19 | `js/vehicles/excavator/assembly-parts.js` | EX–240 excavator · assembly parts: The 13 numbered systems of the exploded view and the extra parts that move with them. |
 | | **Construction site** | |
 | 20 | `js/environment/construction-site/ground.js` | Construction site · ground: Seeded random generator, site materials, procedural soil texture, ground planes, access lanes, metre ticks, the fleet apron with four parking bays, ground lettering and the static obstacle list. |
-| 21 | `js/environment/construction-site/interactive-yard.js` | Construction site · interactive yard: Physics-backed props, loose soil particles, stockpile deformation, the per-step yard update (props, bucket digging and dumping, track ruts, soil relaxation), terrain-following vehicle pose and Reset Yard. |
-| 22 | `js/environment/construction-site/effects.js` | Construction site · effects: Instanced dust and exhaust-smoke particle pools and the per-step effect emitters. |
+| 21 | `js/environment/construction-site/interactive-yard.js` | Construction site · interactive yard: Physics-backed props, loose soil particles, stockpile deformation, the per-step yard update, and the machine–soil helpers shared by manual play and work mode: bucket digging, loading the dumper and dumping (`stepBucketSoil`), blade pushing (`pushWithBlade`), compaction (`compactUnder`), terrain-following pose (`terrainPoseAt`), props (`stepYardProps`), relaxation (`settleSoil`) and Reset Yard. |
+| 22 | `js/environment/construction-site/effects.js` | Construction site · effects: Instanced dust and exhaust-smoke particle pools, per-machine exhaust and travel dust (`emitMachineEffects`) and releasing the dumper's load (`releaseDumperLoad`). |
 | 23 | `js/environment/construction-site/boreholes.js` | Construction site · bore marks: Shallow bore marks left by the PR–180 auger (up to eight are kept). |
 | 24 | `js/environment/construction-site/foundation-and-stockpiles.js` | Construction site · foundation and stockpiles: Reinforced-concrete foundation bay and the faceted earth and aggregate stockpiles. |
-| 25 | `js/environment/construction-site/soil-terrain.js` | Construction site · deformable soil: Creates the soil simulation (window.createSoilSimulation) and the vertex-coloured terrain mesh that samples its heightfield, plus the excavator bucket payload visual. |
+| 25 | `js/environment/construction-site/soil-terrain.js` | Construction site · deformable soil: Creates the soil simulation (window.createSoilSimulation), the visible soil regions (including the work-mode fill pad) and the vertex-coloured terrain mesh, tinted by height, placed fill, cuts and loose soil, plus the excavator bucket payload visual. |
 | 26 | `js/environment/construction-site/site-props.js` | Construction site · props: Aggregate bins, pallets and pipes, masonry, the site office, safety cones, fuel drums, barricades, perimeter fencing, the survey station and instanced gravel. |
 | 27 | `js/environment/construction-site/finalize.js` | Construction site · finalise: Bakes static props by material, registers static obstacles with the physics world and adds the shadow-catcher ground plane. Runs after every static prop has been created. |
 | 28 | `js/environment/construction-site/track-marks.js` | Construction site · track marks: Ring buffer of instanced tread and tyre impressions left in world space. |
@@ -72,7 +72,7 @@ Order also matters for **side effects**. Scene objects, materials, DOM elements 
 | 36 | `js/ui/console-extras.js` | Console extras: Reset Yard button and the assembly system search field. |
 | | **Vehicles** | |
 | 37 | `js/vehicles/pile-rig/controls.js` | PR–180 pile rig · controls: Pile-rig console panel, mobile sliders and auger button, help text, keyboard input and UI sync. |
-| 38 | `js/vehicles/pile-rig/drilling.js` | PR–180 pile rig · drilling: Auger penetration into the layered soil model, stalling, spoil and bore-mark growth. |
+| 38 | `js/vehicles/pile-rig/drilling.js` | PR–180 pile rig · drilling: Auger penetration into the layered soil model, stalling, spoil and bore-mark growth (`advanceDrilling`, shared with work mode). |
 | 39 | `js/vehicles/bulldozer/controls.js` | Crawler dozer · controls: Blade console panel, mobile sliders, keyboard input and UI sync. |
 | 40 | `js/vehicles/dumper/controls.js` | Off-highway dumper · controls: Tipping-body console panel, mobile slider, keyboard input and UI sync, and recovering the last dumped load when the body is reset. |
 | | **Interface** | |
@@ -81,8 +81,12 @@ Order also matters for **side effects**. Scene objects, materials, DOM elements 
 | 42 | `js/systems/explore-mode.js` | Free explore: Free-explore mode: parks the selected machine and flies the camera with W/A/S/D, Q/E and Shift. |
 | | **Application** | |
 | 43 | `js/app/vehicle-switch.js` | Vehicle switching: switchVehicle() parks the outgoing machine on its carrier, restores the incoming machine and updates every vehicle-specific label; updateModeButton() keeps the switch button in step. |
-| 44 | `js/app/main.js` | Main loop: Initial pose, the deterministic 60 Hz fixed-step simulation, the render loop and start-up (selects the PR–180 and renders the first frame). |
-| 45 | `js/app/api.js` | Public API: window.excavator: the automation and testing interface. Assigned last, after the first frame, so that its presence means the application has fully started. |
+| | **Systems** | |
+| 44 | `js/systems/work-mode.js` | Work mode: the autonomous site demo. Stations, the EX–240 arm kinematics, one generator job per machine, the motion integrator, the haul-lane reservation, shifts and restocking, the ▶ WORK MODE button and the crew panel and phone pad. |
+| 45 | `js/systems/site-audio.js` | Site audio: the procedural Web Audio engine (diesel voices, hydraulic whine, track clatter, reversing alarm, one-shot cues), placement relative to the camera, and the SOUND button. |
+| | **Application** | |
+| 46 | `js/app/main.js` | Main loop: Initial pose, the deterministic 60 Hz fixed-step simulation (with its work-mode branch), the render loop and start-up (selects the PR–180 and renders the first frame). |
+| 47 | `js/app/api.js` | Public API: window.excavator: the automation and testing interface. Assigned last, after the first frame, so that its presence means the application has fully started. |
 
 The six factories have no dependencies on the shared scope. Each defines one `window.create*` function, called by `fleet.js`, `soil-terrain.js` and `main.js`. The public API in `app/api.js` is assigned last, after the first frame, so `window.excavator` existing means start-up has finished.
 
@@ -93,8 +97,25 @@ The six factories have no dependencies on the shared scope. Each defines one `wi
 3. Shared state, camera, lights, materials and geometry helpers.
 4. `fleet.js` creates the drive root, the parked carriers, the PR–180, dozer and dumper (from their factories), the vehicle records and the physics world. The EX–240 is built procedurally by the `excavator/` modules.
 5. The construction site: ground, interactive props, effect pools, stockpiles, the soil simulation and terrain mesh, props, static batching and track marks.
-6. Controls and systems: hydraulics, console, travel, assembly, site navigation, keyboard, mobile gamepad, per-vehicle panels, studio controls, free explore and vehicle switching.
+6. Controls and systems: hydraulics, console, travel, assembly, site navigation, keyboard, mobile gamepad, per-vehicle panels, studio controls, free explore, vehicle switching, work mode and site audio.
 7. `app/main.js` sets the initial pose, starts the fixed-step simulation and render loop, selects the PR–180 and draws the first frame; `app/api.js` exposes `window.excavator`.
+
+## Work mode
+
+`js/systems/work-mode.js` runs the whole fleet without an operator. While it is active, every machine sits on its own carrier (as in free explore), `workMode.active` is set, and `simulateFixedStep` calls `stepWorkMode(dt)` instead of the operator path. The pieces:
+
+- **Stations** (`WORK_SITE`) are fixed poses chosen so that no two footprints overlap and none touches an obstacle or the fence: the EX–240 east of the earth stockpile, the dumper's loading spot beside it at the head of a straight haul lane, the fill pad at the lane's end, the dozer's waiting spot beside the pad, and the PR–180's pile row beside its bay. Entering work mode places each machine at its station.
+- **Jobs** are generator functions, one per machine, stepped once per fixed step. A job sets targets (joint angles, tool positions, blade height) and the speed and turn rate for that step, then `yield`s. Small reusable steps compose them: `driveAlong`, `pivotTo`, `armTo`, `bodyTo`, `rigTool`, `pushTo`, `boreHole`.
+- **The integrator** (`integrateAgent`) applies the commanded motion only if `siteCollision()` allows it, writes the pose to the carrier, follows the terrain (`terrainPoseAt`), animates tracks or wheels through each model's `update`, and compacts the soil, exactly like the operator path.
+- **The EX–240** keeps its real hydraulics: `armTo` feeds joint targets (each cylinder target a few degrees ahead of the joint, like an operator feathering the levers) to `stepHydraulics`, and digging and loading go through the same `stepBucketSoil` as manual play. Poses come from an exact two-link inverse kinematics of the arm (`armPivotIK`, `armTipIK`), checked against the ground guard's bucket points.
+- **Coordination** is one reservation (`crew.lane`) for the haul lane and fill pad: the dumper takes it before reversing to tip, and the dozer before spreading a heap. Each holds it for a bounded time, so there is no deadlock.
+- **Shifts:** when no dig line has enough material within reach (or four passes in a row come back nearly empty), the excavator pours what is left and rests. Once the dumper and dozer have finished too, `restockShift()` calls `resetYard()` and starts new jobs.
+
+Everything is deterministic: the jobs use only the fixed step and the seeded `rand()`, so `window.excavator.stepFixed(n)` reproduces a run exactly. `setWorkMode(false)` lowers the dump body, stops the auger and restores the previously operated machine through `switchVehicle(…, true, true)`.
+
+## Site audio
+
+`js/systems/site-audio.js` builds a Web Audio graph on the first pointer or key event: a voice per machine (sawtooth and square oscillators plus brown noise pulsed at the firing frequency, through a load-dependent low-pass filter; a triangle pump whine; band-passed noise gated at the track-link rate, or low tyre rumble; and a gated reversing alarm), a wind bed, a compressor and a master gain. Each frame, `updateSiteAudio()` maps every machine's activity (hydraulic pump utilisation, travel, auger torque, blade load, or a work-mode job's `load`) to engine revs, and its position to gain and stereo pan relative to the camera target and frustum size. One-shot cues are raised anywhere in the simulation with `cueSound(type, x, y, z, level)` and drained here. Muting fades the master gain and suspends the context; the preference is stored under `isomech-sound`.
 
 ## Libraries and integrity
 
@@ -134,7 +155,8 @@ The four machines are wired by id (`'excavator'`, `'drill'`, `'dozer'`, `'dumper
    - `systems/site-navigation.js` (track systems, print offsets, site-plan marker)
    - `systems/travel.js` and `vehicles/excavator/hydraulics.js` (Return to parking bay / Reset)
    - `systems/explore-mode.js` (body class)
-   - `environment/construction-site/interactive-yard.js` and `effects.js` (ground contact points, exhaust and dust)
+   - `environment/construction-site/interactive-yard.js` and `effects.js` (ground contact points in `TERRAIN_CONTACTS`, exhaust and dust)
+   - `systems/work-mode.js` (a station, a job and its crew-panel row) and `systems/site-audio.js` (an `ENGINE_SPECS` entry)
 5. **Styles**: a `.<name>-mode` body class rule set alongside the existing ones in `css/vehicle-studio.css` / `css/dumper-and-explore.css`, plus an extra marker in the site-plan SVG in `index.html`.
 
 Run `npm run check` and `npm test` afterwards. A vehicle registry that removes these hooks would be a good next refactor; V2 keeps the original wiring so its behaviour stays identical to `ST.html`.
@@ -149,6 +171,8 @@ A second, selectable environment would need a small environment interface, becau
 
 `window.excavator` (see `js/app/api.js`) is the automation interface used by the tests. It exposes:
 - the active vehicle, `switchVehicle`, `setExploreMode`
+- `setWorkMode` and `workMode` (active flag, shift, elapsed time, stats, lane holder and each crew machine's status and pose)
+- `audio` (`supported`, `enabled`, `state`, `setEnabled`, and `levels()` for each voice)
 - the scene, camera, controls and renderer
 - arm angles, `setPose`, `poseValid`
 - drive state and `setDriveInput`
@@ -161,6 +185,21 @@ A second, selectable environment would need a small environment interface, becau
 - Application modules are formatted with Prettier (`npm run format`, settings in `.prettierrc.json`). The six factories are kept exactly as written in `ST.html` and are listed in `.prettierignore`.
 - Each application module starts with a header comment that describes its contents.
 - Files use LF line endings and UTF-8.
+
+## Changes since the V2 split
+
+V2 itself was a behaviour-preserving split (below). These later changes alter behaviour on purpose:
+
+| Change | Where | Why |
+| --- | --- | --- |
+| The bucket fills a dumper parked within reach; the dumper holds 3.28 m³ and re-arms after each tip | `interactive-yard.js`, `dumper/model.js` | Connects the earthworks steps |
+| The dozer blade pushes soil | `soil-simulation.js` (`bladePush`), `interactive-yard.js` | The blade previously only compacted the ground |
+| The hydraulic actuator follows the joint-angle error through the cylinder ratio instead of chasing the target cylinder length | `vehicles/excavator/hydraulics.js` | The bucket linkage reaches its shortest stroke near 90° and the stick its longest near −45°. Length-chasing stalled there, so the bucket could not open far enough to dump (holding D even curled it back to 34°) |
+| A soil sweep keeps the strongest weight per cell, not only the weight from a lower sample | `soil-simulation.js` (`scoopSweep`) | Level drags caught far less than intended |
+| Reset dump body keeps the body's current payload and adds the recovered load | `dumper/controls.js` | Material is conserved now that the payload can change |
+| Soil colour shows placed fill, cuts and loose soil | `soil-terrain.js` | Earthworks were nearly invisible from above; untouched ground looks as before |
+| Phones show only the selected machine's sliders | `css/mobile-overrides.css` | The dozer and dumper sliders showed, and moved the parked machines, while the PR–180 or EX–240 was selected |
+| Work mode, site audio, the fill-pad soil region, the dumper payload read-out | new modules and styles | New features |
 
 ## Provenance and verification
 

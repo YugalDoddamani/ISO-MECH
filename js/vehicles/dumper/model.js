@@ -160,12 +160,17 @@ window.createDumper = function createDumper(THREE) {
     cylinder(.16, .25, m.steel, bedPivot, -.02, .05, z * 1.58, 'z', 16);
     box(.22, .1, .22, m.dark, bed, .3, .2, z * 1.61);
   }
-  // A bounded faceted payload visibly slides out as the body tips.
+  // A bounded faceted payload visibly slides out as the body tips. A mound under the surface stones
+  // grows with the carried volume, so loading by the excavator shows up pass by pass.
   const cargo = group('Loose aggregate payload', bed, 0, .42, 0);
+  const mound = mesh(new THREE.SphereGeometry(1, 20, 8, 0, Math.PI * 2, 0, Math.PI / 2), m.gravel, cargo, 2.45, -.15, 0);
+  mound.name = 'Payload mound';
+  const stones = [];
   for (let i = 0; i < 24; i++) {
-    const stone = mesh(new THREE.IcosahedronGeometry(.22 + (i % 4) * .035, 0), m.gravel, cargo,
-      1.0 + (i % 6) * .57, .18 + (i % 3) * .12, -1.05 + Math.floor(i / 6) * .68);
+    const x = 1.0 + (i % 6) * .57, z = -1.05 + Math.floor(i / 6) * .68, lift = (i % 3) * .06;
+    const stone = mesh(new THREE.IcosahedronGeometry(.22 + (i % 4) * .035, 0), m.gravel, cargo, x, .18 + lift, z);
     stone.scale.set(1.25, .75 + (i % 3) * .15, 1.05);
+    stones.push({ stone, x, z, lift });
   }
 
   const up = new THREE.Vector3(0, 1, 0);
@@ -183,21 +188,38 @@ window.createDumper = function createDumper(THREE) {
   }));
   const wheelbase = tireX[0] - (tireX[1] + tireX[2]) * .5, trackWidth = 3.16;
   const steering = { angle: 0, maxAngle: THREE.MathUtils.degToRad(32), wheelbase, trackWidth };
-  const initialPayloadVolume = .82;
+  // Volumes are m³ in the soil model. The body holds four EX-240 bucket passes and starts part-loaded.
+  const initialPayloadVolume = .82, capacity = 3.28;
   const state = { tip: 0, dumped: false, dumpTimer: 0, payloadVolume: initialPayloadVolume };
   const limits = { tip: [0, 52] };
   const speeds = { tip: 24 };
   function set(key, value) {
     if (key in limits) state[key] = THREE.MathUtils.clamp(value, ...limits[key]);
   }
+  let shownPayload = -1;
+  function updateCargo() {
+    if (state.payloadVolume === shownPayload) return;
+    shownPayload = state.payloadVolume;
+    const fill = THREE.MathUtils.clamp(state.payloadVolume / capacity, 0, 1), height = .1 + fill;
+    mound.scale.set(2.3, height, 1.3);
+    for (const s of stones) {
+      const u = (s.x - 2.45) / 2.3, v = s.z / 1.3;
+      s.stone.position.y = -.07 + height * Math.sqrt(Math.max(0, 1 - u * u - v * v)) + s.lift;
+    }
+  }
   function update(dt = 0, leftSpeed = 0, rightSpeed = 0, steerAngle = steering.angle) {
     steering.angle = THREE.MathUtils.clamp(steerAngle, -steering.maxAngle, steering.maxAngle);
     bedPivot.rotation.z = THREE.MathUtils.degToRad(state.tip);
     const slide = THREE.MathUtils.clamp(state.tip / 52, 0, 1);
     cargo.position.x = -slide * 1.7;
-    if (!state.dumped && state.tip > 34) state.dumpTimer += dt;
+    const loaded = state.payloadVolume > 1e-6;
+    // A lowered body that has been loaded again is ready for the next tip.
+    if (state.dumped && loaded && state.tip < 1) state.dumped = false;
+    if (!state.dumped && loaded && state.tip > 34) state.dumpTimer += dt;
     else if (state.tip <= 34) state.dumpTimer = 0;
-    if (!state.dumped && state.dumpTimer > 1.1) { state.dumped = true; cargo.visible = false; }
+    if (!state.dumped && state.dumpTimer > 1.1) state.dumped = true;
+    cargo.visible = loaded && !state.dumped;
+    updateCargo();
     root.updateMatrixWorld(true);
     for (const ram of rams) {
       const sign = ram.side;
@@ -230,7 +252,9 @@ window.createDumper = function createDumper(THREE) {
   label('DUMPER', .9, .2, root, 2.1, 1.63, 1.45);
   update(0);
   return {
-    root, bed, bedPivot, cargo, state, limits, speeds, set, update, reset, tracks, wheelSystems, steering,
+    root, bed, bedPivot, cargo, state, limits, speeds, set, update, reset, tracks, wheelSystems, steering, capacity,
+    // Dump body floor in bed space (x along the body, z across) and the rim height above the floor.
+    body: { minX: -.125, maxX: 5.225, halfWidth: 1.5, floorY: .18, rimY: 2.5 },
     dimensions: { length: 10.3, width: 4.1, height: 4.5, wheelbase, trackWidth, footprint: { hx: 5.55, hz: 2.65 } },
   };
 };

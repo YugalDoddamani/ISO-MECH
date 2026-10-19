@@ -1,6 +1,6 @@
 # ISO-MECH — Construction Machinery Studio
 
-**A browser-based 3D studio where you operate an EX–240 excavator, a PR–180 rotary piling rig, a crawler dozer and an off-highway dumper on a procedural 90 × 68 m construction yard, explore it on foot, and take the excavator apart in an exploded view.**
+**A browser-based 3D studio where you operate an EX–240 excavator, a PR–180 rotary piling rig, a crawler dozer and an off-highway dumper on a procedural 90 × 68 m construction yard, or press Work Mode and watch the whole crew dig, load, haul, spread and bore on its own. Explore the yard on foot, take the excavator apart in an exploded view, and hear every machine.**
 
 [**Open the GitHub Pages demo →**](https://yugaldoddamani.github.io/ISO-MECH/)
 
@@ -11,6 +11,7 @@
   <img src="docs/screenshots/travel-controls.png" width="49%" alt="The EX–240 travelling with the travel console and drive pad" />
   <img src="docs/screenshots/exploded-view.png" width="49%" alt="The EX–240 separated into 13 labelled systems" />
   <img src="docs/screenshots/dumper-tipping.png" width="49%" alt="The off-highway dumper tipping its load" />
+  <img src="docs/screenshots/work-mode.png" width="98%" alt="Work mode: the EX–240 pours its fourth bucket into the dumper while the crew panel lists every machine's task" />
 </p>
 
 ## What you can explore
@@ -18,12 +19,14 @@
 - **Four machines, one fleet.** Start on the PR–180 and cycle through the EX–240, the crawler dozer, the dumper and free explore with the switch button. Parked machines wait in their marked bays on the east-side apron and keep their position, heading and travel distance.
 - **Operate each machine.** Boom, stick, bucket and slew on the excavator; mast rake, rotary-head feed, Kelly extension, slew and a spinning auger on the piling rig; blade lift and angle on the dozer; a powered tipping body on the dumper.
 - **Drive.** Hold-to-drive tracks with differential steering (or Ackermann steering on the dumper), braking, speed limits, terrain-following pitch and roll, and track or tyre impressions left in the soil.
-- **Work the yard.** The excavator digs and dumps with its bucket, the auger drills bore marks, the dumper releases its load, and every machine compacts and follows the ground it drives over (soft soil reduces traction). It all runs on a deterministic soil model that conserves material volume. Cones, fuel drums and loose pipes are physics props, and exhaust, travel and drilling make smoke and dust. **Reset Yard** restores it all.
+- **Work the yard.** The excavator digs with its bucket and loads a dumper parked beside it (four passes fill the body), the dumper tips its load, the dozer blade pushes and spreads soil, the auger drills bore marks, and every machine compacts and follows the ground it drives over (soft soil reduces traction). It all runs on a deterministic soil model that conserves material volume, and moved soil shows up as darker fill and cut. Cones, fuel drums and loose pipes are physics props, and exhaust, travel and drilling make smoke and dust. **Reset Yard** restores it all.
+- **Work mode.** One button hands the site to an autonomous crew: the EX–240 loads the dumper from the earth stockpile, the dumper reverses down the haul lane and tips on the fill pad, the dozer spreads each load, and the PR–180 bores a pile grid. Follow any machine or watch the whole yard; shifts restock and repeat until you stop.
+- **Sound.** Diesel engines that rev with the work, hydraulic whine, track clatter, reversing alarms and the thud of soil in a steel body, all synthesised live with Web Audio (no sound files) and placed around the camera. **M** mutes.
 - **Free explore.** Park the machines and fly the camera around the site with W/A/S/D, Q/E and Shift.
 - **Inspect 13 systems.** Separate the excavator into its cab, power systems, arm, hydraulics, chassis and crawlers; select a part to read its role.
 - **Desktop or phone.** Orbit, zoom and camera presets, keyboard control with live keycap feedback, and a dedicated touch gamepad on phones.
 
-The complete key map, mobile layout and simulation scope are in [the operator guide](docs/operator-ui.md).
+The complete key map, mobile layout, work mode, sound and simulation scope are in [the operator guide](docs/operator-ui.md).
 
 ## Run locally
 
@@ -39,7 +42,7 @@ Then open <http://127.0.0.1:8000/> in a WebGL-capable browser. Opening `index.ht
 
 ```text
 index.html                 Page markup; loads the stylesheets, the CDN libraries and the application scripts in order
-css/                       11 stylesheets, split by concern (base, console, assembly, site map, mobile, vehicle studio, …)
+css/                       13 stylesheets, split by concern (base, console, assembly, site map, mobile, vehicle studio, work mode, sound, …)
 js/
   core/                    runtime (renderer, scene, start-up guard), shared state, camera, lighting, materials, geometry helpers
   vehicles/
@@ -52,7 +55,7 @@ js/
     soil-simulation.js     deterministic, volume-conserving earthworks model
     construction-site/     ground and lanes, interactive yard, effects, bore marks, stockpiles, soil terrain, props, track marks
   physics/                 cannon-es yard physics adapter and the fixed-step accumulator
-  systems/                 travel, exploded assembly, site navigation and collision, free explore
+  systems/                 travel, exploded assembly, site navigation and collision, free explore, work mode, site audio
   input/                   keyboard and mobile gamepad
   ui/                      status toast, console sheet and help, console extras, studio controls
   app/                     vehicle switching, the main loop, the window.excavator API
@@ -97,6 +100,8 @@ The browser checks answer the jsDelivr URLs from the pinned copies in `node_modu
 
 - **Camera rig:** an orthographic camera with damped `OrbitControls`, kept above the ground. During travel, the camera and target receive the same eased translation, so you can keep orbiting while following the machine. The frustum blends between close-up, assembly and the full-yard overview.
 - **Deterministic simulation:** machine motion, hydraulics, soil and props advance in fixed 60 Hz steps, independent of the display frame rate. The `window.excavator` API can advance the simulation step by step for automated checks.
+- **Work mode:** each machine runs a small job (a generator stepped with the simulation) that drives the same hydraulics, soil and collision code as manual play. Exact two-link inverse kinematics place the excavator bucket, a grade-controlled blade spreads fill, and one reservation lets the dumper and dozer share the haul lane. See [Architecture](docs/architecture.md#work-mode).
+- **Sound:** a Web Audio graph per machine (oscillators and filtered noise) whose revs, filter and gain follow hydraulic demand, travel, auger torque and blade load; it starts with the first click, as browsers require.
 - **Articulated motion:** the excavator is a hierarchy of named three.js groups. Joints are driven by a pump-limited, damped actuator model with cylinder kinematics, and guarded against the ground and the body envelope. It is a presentation model, not an engineering-grade hydraulic simulator.
 - **Earthworks and physics:** the soil is a 0.5 m heightfield that conserves volume through digging, dumping, drilling and slope relaxation. cannon-es handles the loose props and machine envelopes. These are illustrative interactions, not geotechnical, rigid-body-accurate or drilling physics.
 - **Exploded view:** thirteen systems move along machine-space offsets converted into each part's parent frame. Numbered anchors are projected into a separate label-and-guide overlay, and reassembly restores the saved pose and camera.
@@ -106,5 +111,5 @@ All models, textures and the yard are procedural; the machines are representativ
 ## Documentation
 
 - [Architecture](docs/architecture.md): module map, load order, CDN and integrity, extending the studio
-- [Operator guide](docs/operator-ui.md): key map, mobile layout, fleet, yard behaviour and simulation scope
+- [Operator guide](docs/operator-ui.md): key map, mobile layout, fleet, yard behaviour, work mode, sound and simulation scope
 - [Embedding](docs/embedding.md): iframe example and hosting notes

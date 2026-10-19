@@ -74,7 +74,7 @@ function stepRigInput(dt) {
   if (joystick.y) pileRig.set('tilt', pileRig.state.tilt - joystick.y * pileRig.speeds.tilt * dt);
 }
 function syncRigUI() {
-  if (exploreMode || activeVehicle !== 'drill') return;
+  if (exploreMode || workMode.active || activeVehicle !== 'drill') return;
   for (const key of Object.keys(rigLabels)) {
     const val = pileRig.state[key],
       digits = key === 'head' || key === 'extension' ? 2 : 1;
